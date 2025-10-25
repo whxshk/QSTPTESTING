@@ -48,7 +48,9 @@ SYSTEM_PROMPT = """You are an expert compliance analyst specializing in Qatar Ce
 
 Your task is to analyze startup documentation and compare it against QCB regulatory requirements.
 
-You must return ONLY valid JSON in this exact format:
+CRITICAL: You must return ONLY a valid JSON object. Do NOT wrap it in markdown code blocks or any other formatting. Return the raw JSON directly.
+
+Required JSON format:
 {
   "gaps": [
     {
@@ -72,6 +74,35 @@ Severity guidelines:
 
 Be thorough but fair. If evidence suggests compliance, don't create artificial gaps.
 """
+
+
+def extract_json_from_response(text: str) -> str:
+    """
+    Extract JSON from Claude's response, handling markdown code blocks if present.
+
+    Args:
+        text: Raw response text from Claude
+
+    Returns:
+        Cleaned JSON string
+    """
+    text = text.strip()
+
+    # Check if wrapped in markdown code block
+    if text.startswith("```json"):
+        # Remove ```json from start and ``` from end
+        text = text[7:]  # Remove ```json
+        if text.endswith("```"):
+            text = text[:-3]  # Remove ```
+        text = text.strip()
+    elif text.startswith("```"):
+        # Generic code block
+        text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+    return text
 
 
 @app.route('/health', methods=['GET'])
@@ -205,7 +236,9 @@ STARTUP DECLARED SUMMARY:
 QCB REGULATORY REQUIREMENTS:
 {rules_text}
 
-Analyze the startup's compliance status and identify gaps. Return valid JSON only.
+Analyze the startup's compliance status and identify gaps.
+
+CRITICAL: Return ONLY the raw JSON object. Do not include any explanatory text, markdown formatting, or code block wrappers. Start your response with {{ and end with }}.
 """
 
         logger.info(f"Sending prompt to Claude (length: {len(prompt)} chars)")
@@ -215,7 +248,7 @@ Analyze the startup's compliance status and identify gaps. Return valid JSON onl
             message = client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 system=SYSTEM_PROMPT,
-                max_tokens=2000,
+                max_tokens=4000,
                 temperature=0,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -223,14 +256,20 @@ Analyze the startup's compliance status and identify gaps. Return valid JSON onl
             response_text = message.content[0].text
             logger.info(f"Received Claude response (length: {len(response_text)} chars)")
 
-            # Parse JSON response
+            # Extract and parse JSON response
             try:
-                analysis_data = json.loads(response_text)
+                # Clean the response (remove markdown code blocks if present)
+                cleaned_json = extract_json_from_response(response_text)
+                logger.info(f"Cleaned JSON (first 200 chars): {cleaned_json[:200]}")
+
+                analysis_data = json.loads(cleaned_json)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse Claude response as JSON: {e}")
-                logger.error(f"Response text: {response_text[:500]}")
+                logger.error(f"Original response: {response_text[:1000]}")
+                logger.error(f"Cleaned response: {cleaned_json[:1000] if 'cleaned_json' in locals() else 'N/A'}")
                 return jsonify({
-                    "error": "Failed to parse AI response. Please try again."
+                    "error": "Failed to parse AI response. The AI returned invalid JSON format. Please try again.",
+                    "debug_info": response_text[:500] if logger.level == logging.DEBUG else None
                 }), 500
 
             gaps = analysis_data.get("gaps", [])
