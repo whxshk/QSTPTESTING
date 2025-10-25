@@ -98,8 +98,17 @@ fintech-regulatory-readiness/
 2. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env and add your ANTHROPIC_API_KEY
    ```
+
+   **Edit `.env` and set your ANTHROPIC_API_KEY**:
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-api03-...your-key-here...
+   PORT=5000
+   FLASK_DEBUG=False
+   VITE_API_URL=/api
+   ```
+
+   > **Important**: The ANTHROPIC_API_KEY is **required** for the `/analyze` endpoint. Get your API key from [Anthropic Console](https://console.anthropic.com/). The `/upload` endpoint will work without it.
 
 3. **Start the application**
    ```bash
@@ -108,8 +117,13 @@ fintech-regulatory-readiness/
 
 4. **Access the platform**
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-   - Health Check: http://localhost:5000/health
+   - Backend API: http://localhost:5000 (direct) or http://localhost:3000/api (via nginx proxy)
+   - Health Check: http://localhost:5000/health or http://localhost:3000/api/health
+
+5. **Run automated tests** (optional)
+   ```bash
+   ./test-api.sh
+   ```
 
 ### Option 2: Manual Development Setup
 
@@ -278,32 +292,217 @@ Clear indexed documents.
 
 10. **Download report** for offline review
 
-### Testing with cURL
+### Automated Testing with test-api.sh
 
-**Upload documents**:
+Run the comprehensive test suite:
 ```bash
-curl -X POST http://localhost:5000/upload \
-  -F "files=@/path/to/business-plan.docx" \
-  -F "files=@/path/to/compliance-policy.pdf"
+./test-api.sh
+```
+
+This script tests:
+- Backend health check
+- Frontend nginx proxy
+- File upload (direct and via proxy)
+- Compliance analysis
+- File size limits
+- CORS headers
+
+### Manual Testing with cURL
+
+**Health check (backend direct)**:
+```bash
+curl -i http://localhost:5000/health
+```
+
+**Health check (via frontend proxy)**:
+```bash
+curl -i http://localhost:3000/api/health
+```
+
+**Upload documents (direct to backend)**:
+```bash
+curl -i -X POST http://localhost:5000/upload \
+  -F "files=@2. Mock Startup Business Plan (Input Document).docx" \
+  -F "files=@4. Mock Startup Internal Compliance Policy.docx"
+```
+
+**Upload documents (via frontend proxy)**:
+```bash
+curl -i -X POST http://localhost:3000/api/upload \
+  -F "files=@6. Mock Startup Legal Structure Document.docx"
 ```
 
 **Analyze compliance**:
 ```bash
-curl -X POST http://localhost:5000/analyze \
+curl -i -X POST http://localhost:5000/analyze \
   -H "Content-Type: application/json" \
   -d '{
-    "summary": "P2P lending, QAR 5M capital, data in Ireland"
+    "summary": "P2P lending platform, paid-up capital QAR 5,000,000, data hosted in Ireland and Singapore, no dedicated Compliance Officer, AML policy drafted but not board-approved"
   }'
 ```
 
-**Health check**:
+### Expected Responses
+
+**Health Check (200 OK)**:
+```json
+{
+  "status": "healthy",
+  "claude_configured": true,
+  "api_key_present": true,
+  "index_stats": {
+    "indexed": false,
+    "total_chunks": 0,
+    "index_size": 0
+  }
+}
+```
+
+**Upload Success (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Successfully indexed 1 files",
+  "chunks_indexed": 45,
+  "files_processed": 1,
+  "embedding_dimension": 384
+}
+```
+
+**File Too Large (413 Payload Too Large)**:
+```json
+{
+  "error": "File too large. Maximum size is 50MB per file.",
+  "code": "FILE_TOO_LARGE",
+  "max_size_mb": 50
+}
+```
+
+**Missing API Key (503 Service Unavailable)**:
+```json
+{
+  "error": "AI analysis not configured. Please set ANTHROPIC_API_KEY environment variable.",
+  "requires_api_key": true,
+  "code": "MISSING_API_KEY"
+}
+```
+
+## 🔐 Environment Variables
+
+### Required Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `ANTHROPIC_API_KEY` | API key for Claude AI (get from [Anthropic Console](https://console.anthropic.com/)) | None | **Yes** (for `/analyze` endpoint) |
+| `PORT` | Backend server port | `5000` | No |
+| `FLASK_DEBUG` | Enable Flask debug mode | `False` | No |
+| `VITE_API_URL` | Frontend API base URL | `/api` | No |
+
+### Environment Configuration Files
+
+- **Root `.env`**: Used by Docker Compose to pass variables to containers
+- **`backend/.env`**: Used for local backend development
+- **`frontend/.env`**: Used for local frontend development
+
+### Docker Deployment
+
+When using Docker Compose, only the root `.env` file is needed:
+
 ```bash
-curl http://localhost:5000/health
+# .env
+ANTHROPIC_API_KEY=sk-ant-api03-...your-key...
+PORT=5000
+FLASK_DEBUG=False
+VITE_API_URL=/api
+```
+
+Docker Compose will automatically:
+- Pass `ANTHROPIC_API_KEY` to the backend container
+- Set `PORT=5000` for the backend
+- Set `VITE_API_URL=/api` for the frontend (uses nginx proxy)
+
+### Local Development
+
+For local development without Docker:
+
+**Backend** (`backend/.env`):
+```bash
+ANTHROPIC_API_KEY=sk-ant-api03-...your-key...
+PORT=5000
+FLASK_DEBUG=True
+MAX_UPLOAD_SIZE_MB=50
+```
+
+**Frontend** (`frontend/.env`):
+```bash
+VITE_API_URL=http://localhost:5000
+```
+
+## 🌐 Network Architecture
+
+### Docker Network Flow
+
+```
+User Browser
+    ↓
+http://localhost:3000 (Frontend Container - nginx)
+    ↓
+/api/* requests → nginx proxy
+    ↓
+http://backend:5000 (Backend Container - Flask)
+    ↓
+Docker Bridge Network
+```
+
+### Port Mapping
+
+| Service | Container Port | Host Port | Access |
+|---------|---------------|-----------|---------|
+| Frontend (nginx) | 80 | 3000 | http://localhost:3000 |
+| Backend (Flask) | 5000 | 5000 | http://localhost:5000 |
+
+### API Access Methods
+
+1. **Via Frontend Proxy** (Recommended for browser):
+   - `http://localhost:3000/api/health`
+   - `http://localhost:3000/api/upload`
+   - `http://localhost:3000/api/analyze`
+
+2. **Direct Backend** (For testing/debugging):
+   - `http://localhost:5000/health`
+   - `http://localhost:5000/upload`
+   - `http://localhost:5000/analyze`
+
+### CORS Configuration
+
+The backend is configured with CORS to allow all origins:
+```python
+CORS(app, resources={r"/*": {"origins": "*"}})
+```
+
+For production, restrict origins:
+```python
+CORS(app, resources={r"/*": {"origins": "https://yourdomain.com"}})
 ```
 
 ## 🔧 Troubleshooting
 
 ### Upload Issues
+
+**Problem**: "Upload Failed – Network Error"
+- **Cause**: Frontend cannot reach backend server
+- **Diagnosis**:
+  ```bash
+  # Test backend health directly
+  curl http://localhost:5000/health
+
+  # Test via frontend proxy
+  curl http://localhost:3000/api/health
+  ```
+- **Solutions**:
+  1. Ensure backend is running: `docker ps` or check backend logs
+  2. Verify `.env` has correct API base URL: `VITE_API_URL=/api`
+  3. Check frontend `src/api.ts` uses correct base URL
+  4. Rebuild frontend if env changed: `docker-compose up --build frontend`
 
 **Problem**: Files upload but show 0 chunks indexed
 - **Cause**: Files may be image-based PDFs without text
@@ -312,6 +511,10 @@ curl http://localhost:5000/health
 **Problem**: "No text could be extracted" error
 - **Cause**: Unsupported file format or corrupted files
 - **Solution**: Verify files are valid DOCX/PDF, try different files
+
+**Problem**: "File too large" error (413)
+- **Cause**: File exceeds 50MB limit
+- **Solution**: Split large files or increase `MAX_CONTENT_LENGTH` in `backend/app.py`
 
 ### Analysis Issues
 
