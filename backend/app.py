@@ -37,7 +37,7 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 # Initialize Anthropic client
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 if not anthropic_api_key:
-    logger.warning("ANTHROPIC_API_KEY not found in environment. Analysis endpoint will fail.")
+    logger.warning("ANTHROPIC_API_KEY not found in environment. Analysis endpoint will be disabled.")
     client = None
 else:
     client = Anthropic(api_key=anthropic_api_key)
@@ -80,6 +80,7 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "claude_configured": client is not None,
+        "api_key_present": anthropic_api_key is not None,
         "index_stats": get_index_stats()
     })
 
@@ -127,11 +128,18 @@ def upload_files():
             return jsonify({"error": str(e)}), 400
 
     except RequestEntityTooLarge:
-        return jsonify({"error": "File too large. Maximum size is 50MB"}), 413
+        return jsonify({
+            "error": "File too large. Maximum size is 50MB per file.",
+            "code": "FILE_TOO_LARGE",
+            "max_size_mb": 50
+        }), 413
 
     except Exception as e:
         logger.error(f"Upload error: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+        return jsonify({
+            "error": f"Upload failed: {str(e)}",
+            "code": "UPLOAD_ERROR"
+        }), 500
 
 
 @app.route('/analyze', methods=['POST'])
@@ -152,7 +160,9 @@ def analyze_compliance():
         # Check if Claude is configured
         if client is None:
             return jsonify({
-                "error": "AI analysis not configured. Please set ANTHROPIC_API_KEY environment variable."
+                "error": "AI analysis not configured. Please set ANTHROPIC_API_KEY environment variable.",
+                "requires_api_key": True,
+                "code": "MISSING_API_KEY"
             }), 503
 
         # Check if index exists

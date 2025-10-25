@@ -50,9 +50,26 @@ const UploadPage = ({ onUploadComplete, onBack }: UploadPageProps) => {
       setUploadStatus('success');
     } catch (error: any) {
       console.error('Upload error:', error);
-      setErrorMessage(
-        error.response?.data?.error || error.message || 'Upload failed. Please try again.'
-      );
+
+      // Handle different error types with specific messages
+      let message = 'Upload failed. Please try again.';
+
+      if (error.response?.data?.error) {
+        message = error.response.data.error;
+
+        // Add specific guidance for known error codes
+        if (error.response.data.code === 'FILE_TOO_LARGE') {
+          message = `${error.response.data.error} Each file must be under ${error.response.data.max_size_mb}MB.`;
+        } else if (error.response.data.code === 'MISSING_API_KEY') {
+          message = 'AI analysis is not configured. Contact the administrator to set up the ANTHROPIC_API_KEY.';
+        }
+      } else if (error.message === 'Network Error') {
+        message = 'Network Error: Cannot reach the backend server. Please ensure the backend is running on port 5000.';
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      setErrorMessage(message);
       setUploadStatus('error');
     } finally {
       setUploading(false);
