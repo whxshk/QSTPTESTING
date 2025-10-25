@@ -46,53 +46,65 @@ else:
 # System prompt for Claude
 SYSTEM_PROMPT = """You are a helpful compliance analyst evaluating Qatar Central Bank (QCB) fintech licensing readiness.
 
-IMPORTANT CONTEXT:
-This startup is PREPARING TO APPLY for licensing. They are NOT yet operational. Be GENEROUS and SUPPORTIVE in your evaluation.
+CRITICAL PARADIGM SHIFT: Focus on STRENGTHS first, gaps second. A well-prepared startup should score 65-85/100.
 
-SCORING GUIDANCE:
-- A well-prepared startup with good documentation should score 65-85 out of 100
-- Only identify 2-4 genuine gaps that need attention
-- DO NOT create artificial gaps or flag minor technicalities
+YOUR TASK:
+1. Identify what the startup HAS DONE WELL (strengths)
+2. Identify what needs improvement (gaps)
 
-WHAT TO FLAG AS GAPS:
-✗ HIGH severity: Critical elements COMPLETELY MISSING (e.g., no business plan exists, no mention of AML/compliance at all)
-✗ MEDIUM severity: Important policies exist but have significant missing components (e.g., AML policy missing transaction screening section)
-✗ LOW severity: Minor documentation improvements needed (e.g., specific procedure needs more detail)
-
-WHAT NOT TO FLAG AS GAPS:
-✓ Policies that need board approval (normal pre-licensing)
-✓ QCB approvals not yet obtained (happen during licensing process)
-✓ Annual reviews not yet done (startup hasn't been operating a year)
-✓ Things mentioned in startup summary but not in documents (they disclosed it)
-✓ Plans to implement something (planning is appropriate at this stage)
-
-IF THE DOCUMENTATION SHOWS:
-- Business plan exists → NO GAP
-- AML/CFT policy documented → NO GAP (even if pending board approval)
-- Compliance officer identified → NO GAP (QCB approval happens during licensing)
-- Capital commitment shown → NO GAP (funds don't need to be paid until licensing)
-- Cybersecurity plans documented → NO GAP (full implementation pre-licensing is unrealistic)
-- Corporate governance structure outlined → NO GAP
+SCORING APPROACH:
+- Strengths ADD points (most startups should have 5-8 strengths)
+- Gaps SUBTRACT points (most startups should have 2-4 gaps)
+- Well-prepared startup: 5-8 strengths, 2-4 minor gaps = 65-85 points
 
 CRITICAL: Return ONLY valid JSON. NO markdown code blocks. Start with { and end with }.
 
 Required format:
 {
+  "strengths": [
+    {
+      "title": "Brief strength title",
+      "rule_ref": "QCB regulation reference",
+      "evidence": "What the startup has done well",
+      "explanation": "Why this demonstrates good readiness",
+      "quality": "excellent|good|adequate"
+    }
+  ],
   "gaps": [
     {
       "title": "Brief gap title",
       "rule_ref": "QCB regulation reference",
-      "evidence": "What the startup currently has (or lacks)",
-      "explanation": "Clear explanation of the compliance gap",
+      "evidence": "What the startup currently lacks",
+      "explanation": "Clear explanation of the gap",
       "severity": "high|medium|low"
     }
   ],
   "notes": [
-    "Positive observations and minor suggestions"
+    "Overall positive observations"
   ]
 }
 
-Be encouraging. Focus on strengths in notes. Only flag real problems as gaps.
+STRENGTH QUALITY LEVELS:
+- "excellent": Comprehensive, well-documented, exceeds basic requirements (+15 points)
+- "good": Well-documented, meets requirements with minor room for enhancement (+12 points)
+- "adequate": Documented, meets minimum requirements (+10 points)
+
+GAP SEVERITY LEVELS:
+- "high": Critical requirement completely missing (-15 points)
+- "medium": Important element needs development (-10 points)
+- "low": Minor improvement needed (-5 points)
+
+WHAT TO IDENTIFY AS STRENGTHS:
+✓ Business plan exists and is comprehensive
+✓ AML/CFT policy documented (even if pending board approval)
+✓ Compliance officer identified
+✓ Capital commitment demonstrated
+✓ Cybersecurity framework documented
+✓ Corporate governance structure outlined
+✓ CDD procedures documented
+✓ Source of funds verification procedures in place
+
+ONLY flag as gaps if TRULY missing or severely inadequate. Be generous - reward what they have!
 """
 
 
@@ -292,11 +304,12 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                     "debug_info": response_text[:500] if logger.level == logging.DEBUG else None
                 }), 500
 
+            strengths = analysis_data.get("strengths", [])
             gaps = analysis_data.get("gaps", [])
             notes = analysis_data.get("notes", [])
 
-            # Calculate score and breakdown
-            score_breakdown = get_detailed_score_breakdown(gaps)
+            # Calculate score and breakdown (NEW: pass strengths AND gaps)
+            score_breakdown = get_detailed_score_breakdown(strengths, gaps)
 
             # Generate recommendations
             recommendations = recommend(gaps)
@@ -309,6 +322,8 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                 "category": score_breakdown["category"],
                 "color": score_breakdown["color"],
                 "needs_expert_review": score_breakdown["needs_expert_review"],
+                "strengths": strengths,
+                "strength_count": len(strengths),
                 "gaps": gaps,
                 "gap_count": len(gaps),
                 "score_breakdown": score_breakdown,
@@ -319,7 +334,8 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
 
             logger.info(
                 f"Analysis complete: Score={response['score']}, "
-                f"Gaps={len(gaps)}, Recommendations={len(recommendations)}"
+                f"Strengths={len(strengths)}, Gaps={len(gaps)}, "
+                f"Recommendations={len(recommendations)}"
             )
 
             return jsonify(response)
@@ -406,33 +422,72 @@ def demo_analysis():
     Shows users what the output looks like without requiring uploads or AI analysis.
     """
     try:
-        # Sample gaps - realistic for a fintech startup preparing to apply
+        # Sample STRENGTHS - what the startup has done well
+        sample_strengths = [
+            {
+                "title": "Comprehensive AML/CFT Policy Framework",
+                "rule_ref": "QCB 1.1.4",
+                "evidence": "Detailed AML/CFT policy covering transaction monitoring, suspicious activity reporting, and customer screening procedures",
+                "explanation": "Your AML/CFT framework is thorough and demonstrates strong understanding of regulatory requirements. It includes specific thresholds, escalation procedures, and clear roles and responsibilities.",
+                "quality": "good"
+            },
+            {
+                "title": "Strong Business Plan with Market Analysis",
+                "rule_ref": "General Requirements",
+                "evidence": "Comprehensive business plan with financial projections, market analysis, and clear value proposition",
+                "explanation": "Your business plan is detailed and shows clear understanding of Qatar's fintech market. Financial projections are realistic and well-supported.",
+                "quality": "excellent"
+            },
+            {
+                "title": "Cybersecurity Framework Documented",
+                "rule_ref": "QCB 2.3.1",
+                "evidence": "ISO 27001-aligned cybersecurity framework with incident response procedures and security controls",
+                "explanation": "Your cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements with comprehensive controls.",
+                "quality": "excellent"
+            },
+            {
+                "title": "Capital Adequacy Commitment",
+                "rule_ref": "QCB 3.1.1",
+                "evidence": "Committed capital of QAR 10,000,000 with shareholder agreements in place",
+                "explanation": "Capital requirements are clearly understood and commitments are documented through shareholder agreements.",
+                "quality": "good"
+            },
+            {
+                "title": "Corporate Governance Structure Defined",
+                "rule_ref": "QCB 4.1.1",
+                "evidence": "Board of 3 directors identified including independent members, with governance framework outlined",
+                "explanation": "Your governance structure meets QCB requirements with appropriate board composition and clear reporting lines.",
+                "quality": "adequate"
+            },
+            {
+                "title": "Customer Due Diligence Procedures",
+                "rule_ref": "QCB 1.2.1",
+                "evidence": "Enhanced CDD procedures documented covering identity verification and beneficial ownership",
+                "explanation": "Your CDD procedures are well-documented and cover the key requirements for customer onboarding and monitoring.",
+                "quality": "good"
+            }
+        ]
+
+        # Sample gaps - only 2 minor issues
         sample_gaps = [
             {
-                "title": "AML Policy Requires Board Approval",
-                "rule_ref": "QCB AML Guidelines 1.4",
-                "evidence": "AML policy exists but lacks formal board approval documentation",
-                "explanation": "Your AML policy is comprehensive and well-structured. However, QCB requires formal board approval with signed minutes. This is a procedural requirement that can be addressed quickly.",
+                "title": "Data Residency Implementation Timeline",
+                "rule_ref": "QCB 2.1.1",
+                "evidence": "Plan to use Qatar-based data centers documented but specific timeline and provider not confirmed",
+                "explanation": "While you've identified the data residency requirement, provide a specific timeline and confirm Qatar-based hosting arrangements.",
                 "severity": "medium"
             },
             {
-                "title": "Business Continuity Plan Needs Update",
-                "rule_ref": "QCB Operational Risk 3.2",
-                "evidence": "Business continuity plan from 2023 has not been reviewed in current year",
-                "explanation": "QCB requires annual review and testing of business continuity plans. Your existing plan is solid but needs current year attestation and testing documentation.",
-                "severity": "low"
-            },
-            {
-                "title": "Customer Complaint Process Documentation Incomplete",
-                "rule_ref": "QCB Consumer Protection 2.5",
-                "evidence": "Complaint handling procedure exists but missing escalation timelines",
-                "explanation": "Your complaint handling framework is in place, but QCB requires specific documented timelines for each escalation level. A minor documentation enhancement is needed.",
+                "title": "Business Continuity Testing Schedule",
+                "rule_ref": "QCB Operational Risk",
+                "evidence": "Business continuity plan exists but annual testing schedule not specified",
+                "explanation": "Include a specific schedule for annual BCP testing and document the testing procedures.",
                 "severity": "low"
             }
         ]
 
-        # Calculate score
-        score_breakdown = get_detailed_score_breakdown(sample_gaps)
+        # Calculate score (NEW: pass strengths AND gaps)
+        score_breakdown = get_detailed_score_breakdown(sample_strengths, sample_gaps)
 
         # Get recommendations
         recommendations = recommend(sample_gaps)
@@ -454,6 +509,8 @@ def demo_analysis():
             "category": score_breakdown["category"],
             "color": score_breakdown["color"],
             "needs_expert_review": score_breakdown["needs_expert_review"],
+            "strengths": sample_strengths,
+            "strength_count": len(sample_strengths),
             "gaps": sample_gaps,
             "gap_count": len(sample_gaps),
             "score_breakdown": score_breakdown,
