@@ -1,0 +1,134 @@
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "timestamp": "2025-10-25T16:03:31.673356",
+  "configuration": {
+    "similarity_threshold": 0.7,
+    "max_recommendations": 3,
+    "default_confidence": 0.75
+  },
+  "summary": {
+    "total_clauses": 4,
+    "compliant_clauses": 0,
+    "gaps_detected": 4,
+    "compliance_rate": "0.0%",
+    "average_confidence": 0.96
+  },
+  "results": [
+    {
+      "clause": "Data hosted in AWS in Ireland and Singapore",
+      "source": "Startup Data Privacy Policy",
+      "mapped_rule": "QCB 2.1.1",
+      "compliance": "no",
+      "severity": "High Risk",
+      "severity_category": "Data Security",
+      "priority": 1,
+      "reason": "QCB 2.1.1 explicitly requires that Customer PII and transactional data of Qatari residents must be stored on servers physically located in Qatar. The startup's clause indicates data is hosted in AWS regions in Ireland and Singapore, which are outside Qatar's jurisdiction. This directly violates the data residency requirement mandated by Qatar Central Bank for fintech entities handling Qatari resident data.",
+      "confidence": 0.95,
+      "action_required": "Migrate all Customer PII and transactional data of Qatari residents to AWS Middle East (Bahrain) region or establish dedicated servers physically located within Qatar. Update data architecture to ensure compliance with data residency requirements before commencing operations or apply for specific exemption from QCB if applicable.",
+      "recommendations": [
+        {
+          "resource_id": "EXPERT_C101",
+          "name": "Dr. Aisha Al-Mansoori",
+          "type": "Compliance Expert",
+          "provider": "QCB Network",
+          "specialization": "Data Residency and Cloud Compliance (QCB Article 2.1)",
+          "description": "Data Residency and Cloud Compliance (QCB Article 2.1)"
+        }
+      ]
+    },
+    {
+      "clause": "No dedicated Compliance Officer assigned yet",
+      "source": "Business Plan - Governance",
+      "mapped_rule": "QCB 2.2.1",
+      "compliance": "no",
+      "severity": "Missing Mandatory Document/Role",
+      "severity_category": "Governance",
+      "priority": 1,
+      "reason": "QCB 2.2.1 explicitly requires the appointment of a designated independent Compliance Officer with CV submitted to QCB prior to licensing. The startup clause indicates no dedicated Compliance Officer has been assigned yet, which is a direct violation of this mandatory requirement. This is a critical pre-licensing compliance gap that must be addressed before the fintech entity can operate under QCB regulation.",
+      "confidence": 0.98,
+      "action_required": "Immediately appoint a qualified independent Compliance Officer and submit their CV and credentials to Qatar Central Bank (QCB) for approval prior to commencing any regulated fintech operations. Ensure the appointed officer has appropriate qualifications in regulatory compliance and fintech operations.",
+      "recommendations": [
+        {
+          "resource_id": "QDB_EXPERT_002",
+          "name": "AML Compliance Workshop Series",
+          "type": "QDB Program",
+          "provider": "Qatar Development Bank",
+          "focus_areas": [
+            "AML Policy Drafting",
+            "Transaction Monitoring",
+            "FATF Compliance"
+          ],
+          "description": "QDB Program focusing on: AML Policy Drafting, Transaction Monitoring, FATF Compliance"
+        },
+        {
+          "resource_id": "EXPERT_C101",
+          "name": "Dr. Aisha Al-Mansoori",
+          "type": "Compliance Expert",
+          "provider": "QCB Network",
+          "specialization": "Data Residency and Cloud Compliance (QCB Article 2.1)",
+          "description": "Data Residency and Cloud Compliance (QCB Article 2.1)"
+        }
+      ]
+    },
+    {
+      "clause": "Paid-up capital is QAR 5,000,000",
+      "source": "Articles of Association",
+      "mapped_rule": "QCB 3.1.1",
+      "compliance": "no",
+      "severity": "Financial Deficiency",
+      "severity_category": "Capital Requirements",
+      "priority": 1,
+      "reason": "The stated paid-up capital of QAR 5,000,000 falls short of the minimum regulatory capital requirement of QAR 7,500,000 mandated by QCB 3.1.1 for marketplace lending platforms. There is a capital shortfall of QAR 2,500,000.",
+      "confidence": 0.95,
+      "action_required": "Increase paid-up capital by QAR 2,500,000 to meet the minimum requirement of QAR 7,500,000 before applying for or maintaining P2P lending platform license",
+      "financial_gap": {
+        "current": "QAR 5,000,000",
+        "required": "QAR 7,500,000",
+        "shortfall": "QAR 2,500,000",
+        "category": "Marketplace Lending - Category 2"
+      }
+    },
+    {
+      "clause": "Maximum transaction value for loans is QAR 200,000",
+      "source": "Business Plan - Activities",
+      "mapped_rule": "QCB 1.1.2",
+      "compliance": "no",
+      "severity": "Compliance Warning",
+      "severity_category": "AML/KYC",
+      "priority": 2,
+      "reason": "The clause permits loan transactions up to QAR 200,000, which significantly exceeds the QAR 50,000 threshold specified in QCB 1.1.2. Under this regulation, all transactions exceeding QAR 50,000 must have documented source of funds and wealth verification, particularly for high-risk customers. The clause does not indicate any provisions for enhanced due diligence, source of funds documentation, or wealth verification mechanisms for loans between QAR 50,000 and QAR 200,000. This creates a compliance gap as the startup would be facilitating transactions that trigger regulatory requirements without demonstrating the necessary controls.",
+      "confidence": 0.95,
+      "action_required": "Implement mandatory source of funds and wealth verification procedures for all loan transactions exceeding QAR 50,000. Update the clause to explicitly state: 'Maximum transaction value for loans is QAR 200,000, subject to enhanced due diligence including documented source of funds and wealth verification for all transactions exceeding QAR 50,000 as per QCB 1.1.2 requirements.' Establish documented policies and technical controls to enforce this verification before loan approval.",
+      "recommendations": [
+        {
+          "resource_id": "QDB_EXPERT_002",
+          "name": "AML Compliance Workshop Series",
+          "type": "QDB Program",
+          "provider": "Qatar Development Bank",
+          "focus_areas": [
+            "AML Policy Drafting",
+            "Transaction Monitoring",
+            "FATF Compliance"
+          ],
+          "description": "QDB Program focusing on: AML Policy Drafting, Transaction Monitoring, FATF Compliance"
+        },
+        {
+          "resource_id": "EXPERT_C101",
+          "name": "Dr. Aisha Al-Mansoori",
+          "type": "Compliance Expert",
+          "provider": "QCB Network",
+          "specialization": "Data Residency and Cloud Compliance (QCB Article 2.1)",
+          "description": "Data Residency and Cloud Compliance (QCB Article 2.1)"
+        },
+        {
+          "resource_id": "EXPERT_C102",
+          "name": "Mr. Karim Hassan",
+          "type": "Compliance Expert",
+          "provider": "QCB Network",
+          "specialization": "AML/CFT Policy Drafting and Training (QCB Article 1.1.4)",
+          "description": "AML/CFT Policy Drafting and Training (QCB Article 1.1.4)"
+        }
+      ]
+    }
+  ]
+}
