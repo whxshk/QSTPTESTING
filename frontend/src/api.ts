@@ -129,4 +129,9 @@ export const clearIndex = async () => {
   return response.data;
 };
 
+export const getDemoAnalysis = async (): Promise<AnalysisResult> => {
+  const response = await api.get('/demo');
+  return response.data;
+};
+
 export default api;

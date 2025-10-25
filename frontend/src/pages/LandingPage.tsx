@@ -1,10 +1,11 @@
-import { ArrowRight, CheckCircle, FileText, BarChart3, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle, FileText, BarChart3, Users, Eye } from 'lucide-react';
 
 interface LandingPageProps {
   onStart: () => void;
+  onViewDemo: () => void;
 }
 
-const LandingPage = ({ onStart }: LandingPageProps) => {
+const LandingPage = ({ onStart, onViewDemo }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-blue-50">
       {/* Header */}
@@ -37,13 +38,22 @@ const LandingPage = ({ onStart }: LandingPageProps) => {
             against Qatar Central Bank (QCB) regulatory requirements. Identify gaps,
             get a readiness score, and receive tailored recommendations.
           </p>
-          <button
-            onClick={onStart}
-            className="btn-primary text-lg px-8 py-4 inline-flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
-          >
-            <span>Upload Documents & Start Analysis</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={onStart}
+              className="btn-primary text-lg px-8 py-4 inline-flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              <span>Upload Documents & Start Analysis</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onViewDemo}
+              className="bg-white text-primary-600 border-2 border-primary-600 text-lg px-8 py-4 inline-flex items-center space-x-2 rounded-lg font-semibold hover:bg-primary-50 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              <Eye className="w-5 h-5" />
+              <span>View Sample Analysis</span>
+            </button>
+          </div>
         </div>
       </section>
 

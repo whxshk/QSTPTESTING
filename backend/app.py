@@ -213,7 +213,7 @@ Analyze the startup's compliance status and identify gaps. Return valid JSON onl
         # Call Claude API
         try:
             message = client.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-3-sonnet-20240229",
                 system=SYSTEM_PROMPT,
                 max_tokens=2000,
                 temperature=0,
@@ -337,6 +337,90 @@ def clear_data():
         })
     except Exception as e:
         logger.error(f"Error clearing index: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/demo', methods=['GET'])
+def demo_analysis():
+    """
+    Return a sample analysis for demonstration purposes.
+    Shows users what the output looks like without requiring uploads or AI analysis.
+    """
+    try:
+        # Sample gaps
+        sample_gaps = [
+            {
+                "title": "Data Residency Non-Compliance",
+                "rule_ref": "QCB Circular 2.1.1",
+                "evidence": "Company stores customer data in Ireland and Singapore data centers",
+                "explanation": "QCB requires all customer data to be stored within Qatar. Your current setup violates this critical requirement.",
+                "severity": "high"
+            },
+            {
+                "title": "Missing Compliance Officer",
+                "rule_ref": "QCB Circular 3.2.1",
+                "evidence": "No dedicated compliance officer mentioned in organizational structure",
+                "explanation": "QCB mandates a full-time compliance officer for all fintech operations. This is a regulatory requirement.",
+                "severity": "high"
+            },
+            {
+                "title": "AML Policy Not Board-Approved",
+                "rule_ref": "QCB AML Guidelines 1.4",
+                "evidence": "AML policy exists but lacks board approval documentation",
+                "explanation": "While you have an AML policy, it must be formally approved by the board of directors as per QCB requirements.",
+                "severity": "medium"
+            },
+            {
+                "title": "Insufficient Capital Adequacy",
+                "rule_ref": "QCB Licensing 2.3",
+                "evidence": "Paid-up capital of QAR 5,000,000",
+                "explanation": "QCB requires minimum paid-up capital of QAR 10,000,000 for payment processing services.",
+                "severity": "high"
+            },
+            {
+                "title": "Missing Cybersecurity Framework",
+                "rule_ref": "QCB Security Standards 4.1",
+                "evidence": "No documented cybersecurity framework or incident response plan",
+                "explanation": "QCB requires a comprehensive cybersecurity framework including risk assessment, controls, and incident response procedures.",
+                "severity": "medium"
+            }
+        ]
+
+        # Calculate score
+        score_breakdown = get_detailed_score_breakdown(sample_gaps)
+
+        # Get recommendations
+        recommendations = recommend(sample_gaps)
+
+        # Sample notes
+        sample_notes = [
+            "Your business plan demonstrates strong market understanding and clear value proposition",
+            "Some compliance policies are in place but require strengthening and formal approval",
+            "Infrastructure changes (data residency) will require significant investment and time",
+            "Consider engaging with QCB early in the licensing process for guidance"
+        ]
+
+        response = {
+            "success": True,
+            "score": score_breakdown["final_score"],
+            "grade": score_breakdown["grade"],
+            "category": score_breakdown["category"],
+            "color": score_breakdown["color"],
+            "needs_expert_review": score_breakdown["needs_expert_review"],
+            "gaps": sample_gaps,
+            "gap_count": len(sample_gaps),
+            "score_breakdown": score_breakdown,
+            "recommendations": recommendations,
+            "notes": sample_notes,
+            "context_chunks_used": 15,
+            "is_demo": True  # Flag to indicate this is sample data
+        }
+
+        logger.info("Returning demo analysis results")
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Demo endpoint error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
