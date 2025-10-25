@@ -213,7 +213,7 @@ Analyze the startup's compliance status and identify gaps. Return valid JSON onl
         # Call Claude API
         try:
             message = client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-5-20250929",
                 system=SYSTEM_PROMPT,
                 max_tokens=2000,
                 temperature=0,
@@ -347,42 +347,28 @@ def demo_analysis():
     Shows users what the output looks like without requiring uploads or AI analysis.
     """
     try:
-        # Sample gaps
+        # Sample gaps - realistic for a fintech startup preparing to apply
         sample_gaps = [
             {
-                "title": "Data Residency Non-Compliance",
-                "rule_ref": "QCB Circular 2.1.1",
-                "evidence": "Company stores customer data in Ireland and Singapore data centers",
-                "explanation": "QCB requires all customer data to be stored within Qatar. Your current setup violates this critical requirement.",
-                "severity": "high"
-            },
-            {
-                "title": "Missing Compliance Officer",
-                "rule_ref": "QCB Circular 3.2.1",
-                "evidence": "No dedicated compliance officer mentioned in organizational structure",
-                "explanation": "QCB mandates a full-time compliance officer for all fintech operations. This is a regulatory requirement.",
-                "severity": "high"
-            },
-            {
-                "title": "AML Policy Not Board-Approved",
+                "title": "AML Policy Requires Board Approval",
                 "rule_ref": "QCB AML Guidelines 1.4",
-                "evidence": "AML policy exists but lacks board approval documentation",
-                "explanation": "While you have an AML policy, it must be formally approved by the board of directors as per QCB requirements.",
+                "evidence": "AML policy exists but lacks formal board approval documentation",
+                "explanation": "Your AML policy is comprehensive and well-structured. However, QCB requires formal board approval with signed minutes. This is a procedural requirement that can be addressed quickly.",
                 "severity": "medium"
             },
             {
-                "title": "Insufficient Capital Adequacy",
-                "rule_ref": "QCB Licensing 2.3",
-                "evidence": "Paid-up capital of QAR 5,000,000",
-                "explanation": "QCB requires minimum paid-up capital of QAR 10,000,000 for payment processing services.",
-                "severity": "high"
+                "title": "Business Continuity Plan Needs Update",
+                "rule_ref": "QCB Operational Risk 3.2",
+                "evidence": "Business continuity plan from 2023 has not been reviewed in current year",
+                "explanation": "QCB requires annual review and testing of business continuity plans. Your existing plan is solid but needs current year attestation and testing documentation.",
+                "severity": "low"
             },
             {
-                "title": "Missing Cybersecurity Framework",
-                "rule_ref": "QCB Security Standards 4.1",
-                "evidence": "No documented cybersecurity framework or incident response plan",
-                "explanation": "QCB requires a comprehensive cybersecurity framework including risk assessment, controls, and incident response procedures.",
-                "severity": "medium"
+                "title": "Customer Complaint Process Documentation Incomplete",
+                "rule_ref": "QCB Consumer Protection 2.5",
+                "evidence": "Complaint handling procedure exists but missing escalation timelines",
+                "explanation": "Your complaint handling framework is in place, but QCB requires specific documented timelines for each escalation level. A minor documentation enhancement is needed.",
+                "severity": "low"
             }
         ]
 
@@ -394,10 +380,12 @@ def demo_analysis():
 
         # Sample notes
         sample_notes = [
-            "Your business plan demonstrates strong market understanding and clear value proposition",
-            "Some compliance policies are in place but require strengthening and formal approval",
-            "Infrastructure changes (data residency) will require significant investment and time",
-            "Consider engaging with QCB early in the licensing process for guidance"
+            "Your business plan demonstrates strong market understanding and clear value proposition for Qatar's fintech ecosystem",
+            "Core compliance framework is well-established with comprehensive AML and cybersecurity policies in place",
+            "Documentation is thorough and shows clear understanding of QCB regulatory requirements",
+            "The identified gaps are primarily procedural and can be addressed within 2-3 weeks",
+            "Capital adequacy and operational infrastructure meet QCB standards for payment processing services",
+            "Strong foundation for licensing application - recommend scheduling pre-application meeting with QCB"
         ]
 
         response = {
