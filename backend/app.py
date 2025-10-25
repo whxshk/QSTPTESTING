@@ -100,11 +100,17 @@ def upload_files():
         if not request.files:
             return jsonify({"error": "No files provided"}), 400
 
-        # Collect all files
+        # Collect all files (handle multiple files with same key 'files')
         files_data = []
-        for key in request.files:
-            file = request.files[key]
-            if file.filename:
+        uploaded_files = request.files.getlist('files')
+
+        if not uploaded_files:
+            # Fallback: try iterating through all keys
+            for key in request.files:
+                uploaded_files.extend(request.files.getlist(key))
+
+        for file in uploaded_files:
+            if file and file.filename:
                 file_bytes = file.read()
                 files_data.append((file_bytes, file.filename))
                 logger.info(f"Received file: {file.filename} ({len(file_bytes)} bytes)")
@@ -207,7 +213,7 @@ Analyze the startup's compliance status and identify gaps. Return valid JSON onl
         # Call Claude API
         try:
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-sonnet-20240620",
                 system=SYSTEM_PROMPT,
                 max_tokens=2000,
                 temperature=0,
