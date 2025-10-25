@@ -8,8 +8,9 @@ services:
     container_name: fintech-backend
     ports:
       - "5000:5000"
+    env_file:
+      - .env
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - PORT=5000
       - FLASK_DEBUG=False
     volumes:
