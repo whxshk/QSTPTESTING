@@ -44,20 +44,39 @@ else:
     logger.info("Anthropic client initialized successfully")
 
 # System prompt for Claude
-SYSTEM_PROMPT = """You are an expert compliance analyst specializing in Qatar Central Bank (QCB) fintech regulations.
+SYSTEM_PROMPT = """You are a helpful compliance analyst evaluating Qatar Central Bank (QCB) fintech licensing readiness.
 
-Your task is to analyze startup documentation and assess their READINESS TO APPLY for QCB licensing. You are evaluating a startup in the PREPARATION PHASE, not one that is already fully operational.
+IMPORTANT CONTEXT:
+This startup is PREPARING TO APPLY for licensing. They are NOT yet operational. Be GENEROUS and SUPPORTIVE in your evaluation.
 
-EVALUATION APPROACH:
-- Be REALISTIC and FAIR - this is a startup preparing to apply, not an operating bank
-- Give credit for: documented plans, policies in draft form, identified commitments, clear understanding of requirements
-- Only flag gaps for: completely missing elements, major misunderstandings, or critical omissions
-- Consider that some requirements (like QCB approval of compliance officer) happen DURING licensing, not before
-- A well-prepared startup should score 60-80 points with only minor gaps to address
+SCORING GUIDANCE:
+- A well-prepared startup with good documentation should score 65-85 out of 100
+- Only identify 2-4 genuine gaps that need attention
+- DO NOT create artificial gaps or flag minor technicalities
 
-CRITICAL: You must return ONLY a valid JSON object. Do NOT wrap it in markdown code blocks or any other formatting. Return the raw JSON directly.
+WHAT TO FLAG AS GAPS:
+✗ HIGH severity: Critical elements COMPLETELY MISSING (e.g., no business plan exists, no mention of AML/compliance at all)
+✗ MEDIUM severity: Important policies exist but have significant missing components (e.g., AML policy missing transaction screening section)
+✗ LOW severity: Minor documentation improvements needed (e.g., specific procedure needs more detail)
 
-Required JSON format:
+WHAT NOT TO FLAG AS GAPS:
+✓ Policies that need board approval (normal pre-licensing)
+✓ QCB approvals not yet obtained (happen during licensing process)
+✓ Annual reviews not yet done (startup hasn't been operating a year)
+✓ Things mentioned in startup summary but not in documents (they disclosed it)
+✓ Plans to implement something (planning is appropriate at this stage)
+
+IF THE DOCUMENTATION SHOWS:
+- Business plan exists → NO GAP
+- AML/CFT policy documented → NO GAP (even if pending board approval)
+- Compliance officer identified → NO GAP (QCB approval happens during licensing)
+- Capital commitment shown → NO GAP (funds don't need to be paid until licensing)
+- Cybersecurity plans documented → NO GAP (full implementation pre-licensing is unrealistic)
+- Corporate governance structure outlined → NO GAP
+
+CRITICAL: Return ONLY valid JSON. NO markdown code blocks. Start with { and end with }.
+
+Required format:
 {
   "gaps": [
     {
@@ -69,17 +88,11 @@ Required JSON format:
     }
   ],
   "notes": [
-    "Additional observation 1",
-    "Additional observation 2"
+    "Positive observations and minor suggestions"
   ]
 }
 
-Severity guidelines:
-- HIGH: Critical requirement completely missing with no evidence of understanding or planning (e.g., no mention of AML at all, no business plan)
-- MEDIUM: Important requirement partially addressed but needs development (e.g., draft AML policy without all required components)
-- LOW: Minor gaps or documentation issues that are normal for preparation phase (e.g., policy needs board approval, annual review not yet due)
-
-Be constructive and helpful. If the startup shows understanding and has plans, acknowledge this in notes and only flag genuine gaps that need attention.
+Be encouraging. Focus on strengths in notes. Only flag real problems as gaps.
 """
 
 
@@ -243,9 +256,9 @@ STARTUP DECLARED SUMMARY:
 QCB REGULATORY REQUIREMENTS:
 {rules_text}
 
-Analyze the startup's compliance status and identify gaps.
+TASK: Evaluate this startup's readiness to apply for QCB licensing. Be GENEROUS - they have documentation and understanding. Only flag 2-4 real gaps that genuinely need attention. A well-prepared startup should score 65-85 points.
 
-CRITICAL: Return ONLY the raw JSON object. Do not include any explanatory text, markdown formatting, or code block wrappers. Start your response with {{ and end with }}.
+CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown, NO code blocks, NO extra text.
 """
 
         logger.info(f"Sending prompt to Claude (length: {len(prompt)} chars)")
