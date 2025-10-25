@@ -1,0 +1,91 @@
+{
+  "qdb_programs": [
+    {
+      "program_id": "QDB_INCUBATOR_001",
+      "program_name": "Fintech Regulatory Accelerator",
+      "focus_areas": ["Licensing Strategy", "Corporate Structure", "QCB Engagement"],
+      "description": "12-week intensive program helping fintech startups navigate QCB licensing requirements",
+      "eligibility": "Early to growth stage fintech companies",
+      "contact": "fintech@qdb.qa"
+    },
+    {
+      "program_id": "QDB_EXPERT_002",
+      "program_name": "AML Compliance Workshop Series",
+      "focus_areas": ["AML Policy Drafting", "Transaction Monitoring", "FATF Compliance"],
+      "description": "Comprehensive training on AML/CFT policy development and implementation",
+      "eligibility": "Licensed and pre-licensed fintech firms",
+      "contact": "compliance@qdb.qa"
+    },
+    {
+      "program_id": "QDB_TECH_003",
+      "program_name": "Cybersecurity Excellence Program",
+      "focus_areas": ["ISO 27001 Certification", "Penetration Testing", "Security Audits"],
+      "description": "Technical assistance for achieving QCB cybersecurity standards",
+      "eligibility": "All fintech startups",
+      "contact": "cybersec@qdb.qa"
+    },
+    {
+      "program_id": "QDB_CAPITAL_004",
+      "program_name": "Capital Readiness Advisory",
+      "focus_areas": ["Capital Planning", "Financial Modeling", "Investor Relations"],
+      "description": "Support for meeting minimum capital requirements and financial planning",
+      "eligibility": "Pre-revenue to Series A fintech companies",
+      "contact": "capital@qdb.qa"
+    },
+    {
+      "program_id": "QDB_LEGAL_005",
+      "program_name": "Corporate Governance Framework",
+      "focus_areas": ["Board Formation", "Governance Policies", "Regulatory Compliance"],
+      "description": "Guidance on establishing compliant corporate governance structures",
+      "eligibility": "All fintech startups",
+      "contact": "governance@qdb.qa"
+    }
+  ],
+  "compliance_experts": [
+    {
+      "expert_id": "EXPERT_C101",
+      "name": "Dr. Aisha Al-Mansoori",
+      "specialization": "Data Residency and Cloud Compliance (QCB Article 2.1)",
+      "experience_years": 12,
+      "background": "Former QCB Technology Supervisor, PhD in Information Security",
+      "availability": "Available for consulting sessions",
+      "contact": "a.almansoori@qdb.qa"
+    },
+    {
+      "expert_id": "EXPERT_C102",
+      "name": "Mr. Karim Hassan",
+      "specialization": "AML/CFT Policy Drafting and Training (QCB Article 1.1.4)",
+      "experience_years": 15,
+      "background": "Certified Anti-Money Laundering Specialist (CAMS), former banking compliance director",
+      "availability": "Available for policy review and training",
+      "contact": "k.hassan@qdb.qa"
+    },
+    {
+      "expert_id": "EXPERT_C103",
+      "name": "Ms. Fatima Al-Thani",
+      "specialization": "Corporate Governance and Board Formation",
+      "experience_years": 10,
+      "background": "Corporate lawyer specializing in financial services regulation",
+      "availability": "Available for governance consulting",
+      "contact": "f.althani@qdb.qa"
+    },
+    {
+      "expert_id": "EXPERT_C104",
+      "name": "Dr. Mohammed Al-Kuwari",
+      "specialization": "Cybersecurity and ISO 27001 Certification",
+      "experience_years": 14,
+      "background": "Lead auditor for ISO 27001, former CISO at major Qatari bank",
+      "availability": "Available for security assessments",
+      "contact": "m.alkuwari@qdb.qa"
+    },
+    {
+      "expert_id": "EXPERT_C105",
+      "name": "Mr. Ahmed Al-Dosari",
+      "specialization": "Financial Modeling and Capital Requirements",
+      "experience_years": 11,
+      "background": "CFA charterholder, former investment banker",
+      "availability": "Available for financial advisory",
+      "contact": "a.aldosari@qdb.qa"
+    }
+  ]
+}

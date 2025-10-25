@@ -1,0 +1,276 @@
+QATARPAY SOLUTIONS - COMPLIANCE POLICY FRAMEWORK
+==============================================
+
+Document Version: 1.0 DRAFT
+Last Updated: March 15, 2024
+Status: Awaiting Board Approval
+
+1. ANTI-MONEY LAUNDERING (AML) POLICY
+--------------------------------------
+
+1.1 Purpose
+This policy establishes QatarPay Solutions' commitment to preventing money laundering and terrorist financing activities. It outlines our approach to customer due diligence, transaction monitoring, and regulatory reporting.
+
+1.2 Scope
+Applies to all employees, contractors, and third-party service providers who handle customer transactions or data.
+
+1.3 Customer Due Diligence (CDD)
+
+Standard CDD Requirements:
+- Full name, Qatar ID or passport number
+- Date of birth and nationality
+- Residential address with proof (utility bill, rental agreement)
+- Source of income (employment letter, business registration)
+- Purpose of account and anticipated transaction volumes
+
+Enhanced Due Diligence (EDD) Triggers:
+- Transactions exceeding QAR 50,000
+- Customers from high-risk jurisdictions
+- Politically Exposed Persons (PEPs)
+- Unusual transaction patterns
+
+Current Implementation Status:
+→ Standard CDD: Implemented via web forms
+→ Enhanced CDD: Manual review process (no automated system yet)
+→ PEP screening: Manual checks against public lists
+→ Risk scoring: Basic algorithm in development
+
+1.4 Source of Funds Verification
+
+For transactions > QAR 50,000:
+- Bank statements for past 3 months
+- Employment verification letter
+- Business income documentation (if applicable)
+- Declaration of source of wealth
+
+Current Process:
+→ Manual review by operations team
+→ Documentation stored in Google Drive (encrypted folders)
+→ Retention period: 5 years as per draft policy
+
+1.5 Transaction Monitoring
+
+Suspicious Activity Indicators:
+- Structuring (multiple transactions to avoid thresholds)
+- Rapid movement of funds
+- Transactions inconsistent with customer profile
+- Unusual cross-border transfers
+
+Current Monitoring:
+→ Daily manual review of transaction reports
+→ Threshold alerts set at QAR 50,000
+→ No automated transaction monitoring system deployed yet
+
+1.6 Reporting Requirements
+
+Internal Reporting:
+- Suspicious transactions flagged to Operations Manager
+- Monthly compliance summary to CEO
+- Quarterly report to Board (planned, not yet implemented)
+
+External Reporting:
+- Suspicious Transaction Reports (STRs) to Qatar Financial Information Unit (QFIU)
+- Timeframe: Within 2 business days of suspicion
+- Status: Process documented but no STRs filed to date
+
+2. DATA PROTECTION AND PRIVACY
+-------------------------------
+
+2.1 Data Classification
+- Public: Marketing materials
+- Internal: Operational documents
+- Confidential: Customer PII, financial data
+- Restricted: Compliance reports, audit findings
+
+2.2 Data Storage
+
+Customer Data Location:
+→ Primary Database: AWS RDS in Ireland (eu-west-1)
+→ Backup: AWS S3 in Singapore (ap-southeast-1)
+→ Local Caching: Redis on AWS ElastiCache (Ireland)
+
+Data Residency Compliance Assessment:
+Status: Under review for QCB requirements
+Action Item: Evaluate Qatar-based cloud providers or co-location facilities
+
+2.3 Data Security Measures
+- AES-256 encryption at rest
+- TLS 1.3 for data in transit
+- Multi-factor authentication for admin access
+- Regular security patching schedule
+- Penetration testing: Annual (planned, not yet conducted)
+
+2.4 Data Retention
+- Customer records: 7 years after account closure
+- Transaction records: 7 years from transaction date
+- Compliance documentation: 7 years
+- Marketing data: Until consent withdrawal
+
+3. KNOW YOUR CUSTOMER (KYC)
+---------------------------
+
+3.1 Identity Verification Process
+
+Individual Customers:
+→ Qatar ID or passport scan
+→ Facial recognition match (using third-party API)
+→ Liveness detection to prevent spoofing
+→ Address verification via utility bill or Kahramaa statement
+
+Business Customers:
+→ Commercial registration certificate
+→ Board resolution authorizing account opening
+→ Beneficial ownership declaration (25%+ ownership)
+→ Authorized signatories identification
+
+Implementation Status:
+- Individual KYC: 80% automated, 20% manual review
+- Business KYC: 90% manual process
+- Biometric verification: In pilot phase
+
+3.2 Ongoing Monitoring
+- Annual KYC refresh for all active customers
+- Immediate review triggered by:
+  * Change in customer risk profile
+  * Large or unusual transactions
+  * Negative news screening hits
+  * Regulatory alerts
+
+4. CYBERSECURITY FRAMEWORK
+--------------------------
+
+4.1 Current Security Posture
+→ ISO 27001: Not yet certified (planning for 2025)
+→ NIST Framework: Partial alignment
+→ Incident Response Plan: Documented, not tested
+
+4.2 Access Controls
+- Role-based access control (RBAC) implemented
+- Principle of least privilege applied
+- Access reviews: Quarterly
+- Privileged access management: Admin actions logged
+
+4.3 Vulnerability Management
+- Quarterly vulnerability scans
+- Critical patches applied within 48 hours
+- Non-critical patches: Monthly maintenance window
+- Third-party security assessment: Pending
+
+5. COMPLIANCE ORGANIZATION
+--------------------------
+
+5.1 Current Structure
+
+Compliance Responsibilities Currently Held By:
+- CFO (Part-time compliance oversight)
+- Operations Manager (Day-to-day compliance tasks)
+- External Consultant (AML policy development)
+
+Planned Structure:
+→ Dedicated Compliance Officer (recruitment in progress)
+→ Direct reporting line to Board
+→ Independent from business operations
+→ Authority to halt non-compliant transactions
+
+5.2 Compliance Training
+- New employee onboarding: AML basics (30 minutes)
+- Annual refresher training: Planned
+- Specialized training for customer-facing staff: Under development
+
+6. REGULATORY REPORTING
+-----------------------
+
+6.1 Required Reports
+
+To Qatar Central Bank:
+- Quarterly prudential returns (post-licensing)
+- Annual audited financial statements
+- Material incident reports (within 24 hours)
+- Suspicious transaction reports (within 48 hours)
+
+To Qatar Financial Information Unit:
+- STRs for transactions meeting reporting criteria
+- Currency Transaction Reports for cash > QAR 55,000
+
+Current Status:
+→ Reporting templates prepared
+→ Submission processes documented
+→ No reports filed yet (pre-licensing)
+
+7. THIRD-PARTY RISK MANAGEMENT
+------------------------------
+
+7.1 Vendor Due Diligence
+- Security questionnaire required
+- Annual vendor risk assessment
+- Contractual data protection obligations
+- Right to audit clause in all contracts
+
+Key Third Parties:
+- AWS (infrastructure): Annual SOC 2 review
+- SendGrid (email): Privacy policy reviewed
+- Twilio (SMS): GDPR compliance verified
+- Plaid (bank linking): Pending security review
+
+8. AUDIT AND MONITORING
+-----------------------
+
+8.1 Internal Controls
+- Segregation of duties for critical processes
+- Dual authorization for transactions > QAR 100,000
+- Daily reconciliation of customer accounts
+- Monthly compliance checklist (in development)
+
+8.2 External Audit
+- Annual financial audit by Big 4 firm (planned)
+- Compliance audit by specialized firm (planned for Q4 2024)
+
+9. POLICY GOVERNANCE
+--------------------
+
+9.1 Policy Review
+- Annual review by Compliance Officer
+- Updates required upon regulatory changes
+- Board approval required for material changes
+
+9.2 Document Control
+Version: 1.0 DRAFT
+Owner: Compliance Function (interim CFO)
+Approver: Board of Directors
+Next Review: Upon Compliance Officer appointment
+
+9.3 Policy Distribution
+- All employees receive copy upon hiring
+- Acknowledgment form signed and filed
+- Updated versions distributed within 5 business days
+
+10. ESCALATION AND BREACH REPORTING
+------------------------------------
+
+10.1 Internal Escalation Path
+Level 1: Operations Manager (operational issues)
+Level 2: CFO (compliance policy violations)
+Level 3: CEO (material breaches)
+Level 4: Board (regulatory matters)
+
+10.2 Breach Response
+- Immediate containment of breach
+- Root cause analysis within 48 hours
+- Remediation plan developed and implemented
+- Regulatory notification if required
+- Documentation and lessons learned
+
+APPENDICES
+----------
+Appendix A: Suspicious Activity Indicators Checklist
+Appendix B: STR Filing Template
+Appendix C: Customer Risk Rating Matrix
+Appendix D: High-Risk Jurisdiction List
+
+---
+APPROVAL STATUS: PENDING BOARD REVIEW
+Prepared by: External Compliance Consultant
+Interim Owner: CFO
+Board Meeting Scheduled: April 2024
+
+This document is confidential and for internal use only.
