@@ -3,7 +3,7 @@ import LandingPage from './pages/LandingPage';
 import UploadPage from './pages/UploadPage';
 import SummaryPage from './pages/SummaryPage';
 import ResultsPage from './pages/ResultsPage';
-import { AnalysisResult } from './api';
+import { AnalysisResult, getDemoAnalysis } from './api';
 
 type Page = 'landing' | 'upload' | 'summary' | 'results';
 
@@ -14,6 +14,17 @@ function App() {
 
   const handleStartAnalysis = () => {
     setCurrentPage('upload');
+  };
+
+  const handleViewDemo = async () => {
+    try {
+      const demoResult = await getDemoAnalysis();
+      setAnalysisResult(demoResult);
+      setCurrentPage('results');
+    } catch (error) {
+      console.error('Failed to load demo:', error);
+      alert('Failed to load demo. Please try again.');
+    }
   };
 
   const handleUploadComplete = () => {
@@ -35,7 +46,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'landing':
-        return <LandingPage onStart={handleStartAnalysis} />;
+        return <LandingPage onStart={handleStartAnalysis} onViewDemo={handleViewDemo} />;
       case 'upload':
         return <UploadPage onUploadComplete={handleUploadComplete} onBack={() => setCurrentPage('landing')} />;
       case 'summary':
@@ -43,7 +54,7 @@ function App() {
       case 'results':
         return <ResultsPage result={analysisResult} onReset={handleReset} />;
       default:
-        return <LandingPage onStart={handleStartAnalysis} />;
+        return <LandingPage onStart={handleStartAnalysis} onViewDemo={handleViewDemo} />;
     }
   };
 

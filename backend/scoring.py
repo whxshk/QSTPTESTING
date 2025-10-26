@@ -1,6 +1,6 @@
 """
 Compliance scoring module.
-Calculates readiness scores based on identified regulatory gaps.
+Calculates readiness scores based on STRENGTHS (reward points) and gaps (deduct points).
 """
 
 from typing import List, Dict
@@ -9,58 +9,79 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Scoring weights for different severity levels
-SEVERITY_WEIGHTS = {
-    "high": 35,
-    "medium": 20,
-    "low": 10
+# Strength quality points (ADDITIVE - rewards for what they have)
+STRENGTH_POINTS = {
+    "excellent": 15,  # Comprehensive, exceeds requirements
+    "good": 12,       # Well-documented, meets requirements
+    "adequate": 10    # Documented, meets minimum
 }
 
-# Base score
-BASE_SCORE = 100
+# Gap severity points (DEDUCTIVE - but less harsh than before)
+GAP_PENALTIES = {
+    "high": 15,    # Critical missing (was 35)
+    "medium": 10,  # Important needs work (was 20)
+    "low": 5       # Minor improvement (was 10)
+}
 
 
-def compute_score(gaps: List[Dict]) -> int:
+def compute_score(strengths: List[Dict], gaps: List[Dict]) -> int:
     """
-    Calculate compliance readiness score based on gaps.
+    Calculate compliance readiness score based on STRENGTHS and gaps.
 
-    Scoring algorithm:
-    - Start with 100 points
-    - Deduct 35 points for each HIGH severity gap
-    - Deduct 20 points for each MEDIUM severity gap
-    - Deduct 10 points for each LOW severity gap
-    - Minimum score is 0
+    NEW SCORING ALGORITHM:
+    - Start at 0 points
+    - ADD points for each strength based on quality
+    - SUBTRACT points for each gap based on severity
+    - Cap at 0-100
+
+    This rewards startups for what they DO have, not just punishing for what's missing.
 
     Args:
+        strengths: List of strength dictionaries with 'quality' field
         gaps: List of gap dictionaries with 'severity' field
 
     Returns:
         Score between 0 and 100
     """
-    score = BASE_SCORE
+    score = 0
 
-    severity_counts = {"high": 0, "medium": 0, "low": 0}
+    # ADD points for strengths
+    strength_counts = {"excellent": 0, "good": 0, "adequate": 0}
+    for strength in strengths:
+        quality = strength.get("quality", "adequate").lower()
 
+        if quality in STRENGTH_POINTS:
+            points = STRENGTH_POINTS[quality]
+            score += points
+            strength_counts[quality] += 1
+        else:
+            logger.warning(f"Unknown strength quality: {quality}, treating as adequate")
+            score += STRENGTH_POINTS["adequate"]
+            strength_counts["adequate"] += 1
+
+    # SUBTRACT points for gaps
+    gap_counts = {"high": 0, "medium": 0, "low": 0}
     for gap in gaps:
         severity = gap.get("severity", "low").lower()
 
-        if severity in SEVERITY_WEIGHTS:
-            deduction = SEVERITY_WEIGHTS[severity]
-            score -= deduction
-            severity_counts[severity] += 1
+        if severity in GAP_PENALTIES:
+            penalty = GAP_PENALTIES[severity]
+            score -= penalty
+            gap_counts[severity] += 1
         else:
-            logger.warning(f"Unknown severity level: {severity}, treating as low")
-            score -= SEVERITY_WEIGHTS["low"]
-            severity_counts["low"] += 1
+            logger.warning(f"Unknown gap severity: {severity}, treating as low")
+            score -= GAP_PENALTIES["low"]
+            gap_counts["low"] += 1
 
-    # Ensure score doesn't go below 0
-    final_score = max(0, score)
+    # Cap score at 0-100
+    final_score = max(0, min(100, score))
 
     logger.info(
-        f"Computed score: {final_score} "
-        f"(High: {severity_counts['high']}, "
-        f"Medium: {severity_counts['medium']}, "
-        f"Low: {severity_counts['low']})"
+        f"Computed score: {final_score} | "
+        f"Strengths: {len(strengths)} (Exc:{strength_counts['excellent']}, "
+        f"Good:{strength_counts['good']}, Adeq:{strength_counts['adequate']}) | "
+        f"Gaps: {len(gaps)} (High:{gap_counts['high']}, "
+        f"Med:{gap_counts['medium']}, Low:{gap_counts['low']})"
     )
 
     return final_score
@@ -155,27 +176,32 @@ def needs_expert_review(score: int, gaps: List[Dict]) -> bool:
     return False
 
 
-def get_detailed_score_breakdown(gaps: List[Dict]) -> Dict:
+def get_detailed_score_breakdown(strengths: List[Dict], gaps: List[Dict]) -> Dict:
     """
     Get detailed breakdown of score calculation.
 
     Args:
+        strengths: List of identified strengths
         gaps: List of identified gaps
 
     Returns:
         Dictionary with detailed scoring breakdown
     """
-    score = compute_score(gaps)
+    score = compute_score(strengths, gaps)
 
     breakdown = {
-        "base_score": BASE_SCORE,
         "final_score": score,
-        "total_deductions": BASE_SCORE - score,
+        "strength_count": len(strengths),
         "gap_count": len(gaps),
+        "strength_breakdown": {
+            "excellent": {"count": 0, "points_per_item": STRENGTH_POINTS["excellent"], "total_points": 0},
+            "good": {"count": 0, "points_per_item": STRENGTH_POINTS["good"], "total_points": 0},
+            "adequate": {"count": 0, "points_per_item": STRENGTH_POINTS["adequate"], "total_points": 0}
+        },
         "severity_breakdown": {
-            "high": {"count": 0, "deduction_per_gap": SEVERITY_WEIGHTS["high"], "total_deduction": 0},
-            "medium": {"count": 0, "deduction_per_gap": SEVERITY_WEIGHTS["medium"], "total_deduction": 0},
-            "low": {"count": 0, "deduction_per_gap": SEVERITY_WEIGHTS["low"], "total_deduction": 0}
+            "high": {"count": 0, "deduction_per_gap": GAP_PENALTIES["high"], "total_deduction": 0},
+            "medium": {"count": 0, "deduction_per_gap": GAP_PENALTIES["medium"], "total_deduction": 0},
+            "low": {"count": 0, "deduction_per_gap": GAP_PENALTIES["low"], "total_deduction": 0}
         },
         "grade": get_score_grade(score),
         "category": get_score_category(score),
@@ -183,11 +209,27 @@ def get_detailed_score_breakdown(gaps: List[Dict]) -> Dict:
         "needs_expert_review": needs_expert_review(score, gaps)
     }
 
-    # Calculate severity breakdown
+    # Calculate strength breakdown
+    total_strength_points = 0
+    for strength in strengths:
+        quality = strength.get("quality", "adequate").lower()
+        if quality in breakdown["strength_breakdown"]:
+            breakdown["strength_breakdown"][quality]["count"] += 1
+            points = STRENGTH_POINTS[quality]
+            breakdown["strength_breakdown"][quality]["total_points"] += points
+            total_strength_points += points
+
+    # Calculate gap breakdown
+    total_deductions = 0
     for gap in gaps:
         severity = gap.get("severity", "low").lower()
         if severity in breakdown["severity_breakdown"]:
             breakdown["severity_breakdown"][severity]["count"] += 1
-            breakdown["severity_breakdown"][severity]["total_deduction"] += SEVERITY_WEIGHTS[severity]
+            penalty = GAP_PENALTIES[severity]
+            breakdown["severity_breakdown"][severity]["total_deduction"] += penalty
+            total_deductions += penalty
+
+    breakdown["total_strength_points"] = total_strength_points
+    breakdown["total_deductions"] = total_deductions
 
     return breakdown

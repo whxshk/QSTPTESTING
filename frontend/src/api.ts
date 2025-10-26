@@ -15,6 +15,36 @@ export interface Gap {
   evidence: string;
   explanation: string;
   severity: 'low' | 'medium' | 'high';
+  document_name?: string;
+  text_snippet?: string;
+}
+
+export interface Strength {
+  title: string;
+  rule_ref: string;
+  evidence: string;
+  explanation: string;
+  quality: 'excellent' | 'good' | 'adequate';
+  document_name?: string;
+  text_snippet?: string;
+}
+
+export interface DocumentAnnotation {
+  type: 'strength' | 'gap';
+  title: string;
+  explanation: string;
+  rule_ref: string;
+  text_snippet: string;
+  start_index: number | null;
+  end_index: number | null;
+  quality?: 'excellent' | 'good' | 'adequate';
+  severity?: 'low' | 'medium' | 'high';
+}
+
+export interface Document {
+  filename: string;
+  full_text: string;
+  annotations: DocumentAnnotation[];
 }
 
 export interface SeverityBreakdown {
@@ -73,12 +103,15 @@ export interface AnalysisResult {
   category: string;
   color: string;
   needs_expert_review: boolean;
+  strengths?: Strength[];
+  strength_count?: number;
   gaps: Gap[];
   gap_count: number;
   score_breakdown: ScoreBreakdown;
   recommendations: Recommendation[];
   notes: string[];
   context_chunks_used: number;
+  documents?: Document[];
 }
 
 export interface UploadResponse {
@@ -126,6 +159,11 @@ export const getResources = async () => {
 
 export const clearIndex = async () => {
   const response = await api.post('/clear');
+  return response.data;
+};
+
+export const getDemoAnalysis = async (): Promise<AnalysisResult> => {
+  const response = await api.get('/demo');
   return response.data;
 };
 
