@@ -16,11 +16,29 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create non-root user and cache directory
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app && \
-    mkdir -p /home/appuser/.cache/huggingface && \
-    chown -R appuser:appuser /home/appuser/.cache
+# Set HuggingFace cache directory
+ENV HF_HOME=/home/appuser/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers
+ENV HF_DATASETS_CACHE=/home/appuser/.cache/huggingface/datasets
+
+# Create non-root user first
+RUN useradd -m -u 1000 appuser
+
+# Create cache directories with proper permissions
+RUN mkdir -p /home/appuser/.cache/huggingface/hub \
+    /home/appuser/.cache/huggingface/transformers \
+    /home/appuser/.cache/huggingface/datasets && \
+    chown -R appuser:appuser /home/appuser/.cache && \
+    chmod -R 755 /home/appuser/.cache
+
+# Pre-download the sentence-transformers model as appuser to avoid runtime permission issues
+USER appuser
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')" || \
+    echo "Model download failed, will retry at runtime"
+
+# Set ownership of app directory
+USER root
+RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port

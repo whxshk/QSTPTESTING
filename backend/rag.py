@@ -24,12 +24,28 @@ _metadata = []
 
 
 def get_model():
-    """Lazy load the sentence transformer model."""
+    """Lazy load the sentence transformer model with retry logic."""
     global _model
     if _model is None:
         logger.info("Loading sentence transformer model...")
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-        logger.info("Model loaded successfully")
+        try:
+            _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            logger.info("Model loaded successfully")
+        except PermissionError as e:
+            logger.error(f"Permission error loading model: {e}")
+            logger.info("Attempting to load model with cache disabled...")
+            # Try loading without cache as fallback
+            import os
+            os.environ['TRANSFORMERS_OFFLINE'] = '0'
+            _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder=None)
+            logger.info("Model loaded successfully (no cache)")
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            raise RuntimeError(
+                "Failed to load sentence transformer model. "
+                "This may be due to cache directory permissions. "
+                "Please check the logs and rebuild the container."
+            ) from e
     return _model
 
 
