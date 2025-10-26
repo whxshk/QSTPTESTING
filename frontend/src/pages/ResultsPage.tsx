@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle, AlertCircle, XCircle, Download, Home, FileText, Users, TrendingUp } from 'lucide-react';
 import { AnalysisResult } from '../api';
+import DocumentAnnotationViewer from '../components/DocumentAnnotationViewer';
 
 interface ResultsPageProps {
   result: AnalysisResult | null;
@@ -287,6 +288,11 @@ Report Date: ${new Date().toLocaleDateString()}
             </div>
           )}
         </div>
+
+        {/* Document Annotations Viewer */}
+        {result.documents && result.documents.length > 0 && (
+          <DocumentAnnotationViewer documents={result.documents} />
+        )}
 
         {/* Recommendations */}
         {result.recommendations.length > 0 && (
