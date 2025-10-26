@@ -16,26 +16,25 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Set HuggingFace cache directory
-ENV HF_HOME=/home/appuser/.cache/huggingface
-ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers
-ENV HF_DATASETS_CACHE=/home/appuser/.cache/huggingface/datasets
-ENV SENTENCE_TRANSFORMERS_HOME=/home/appuser/.cache/huggingface/sentence-transformers
+# Use /tmp for HuggingFace cache - ALWAYS writable, no permission issues
+ENV HF_HOME=/tmp/huggingface
+ENV TRANSFORMERS_CACHE=/tmp/huggingface/transformers
+ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
+ENV SENTENCE_TRANSFORMERS_HOME=/tmp/huggingface/sentence-transformers
 
-# Create non-root user first
+# Create non-root user
 RUN useradd -m -u 1000 appuser
 
-# Create cache directories with FULL permissions to avoid any issues
-RUN mkdir -p /home/appuser/.cache/huggingface/hub \
-    /home/appuser/.cache/huggingface/transformers \
-    /home/appuser/.cache/huggingface/datasets \
-    /home/appuser/.cache/huggingface/sentence-transformers && \
-    chown -R appuser:appuser /home/appuser && \
-    chmod -R 777 /home/appuser/.cache
+# Create cache in /tmp with full permissions (anyone can write)
+RUN mkdir -p /tmp/huggingface/hub \
+    /tmp/huggingface/transformers \
+    /tmp/huggingface/datasets \
+    /tmp/huggingface/sentence-transformers && \
+    chmod -R 777 /tmp/huggingface
 
-# Pre-download the sentence-transformers model as appuser (MUST succeed)
+# Pre-download model to /tmp as appuser
 USER appuser
-RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Model cached successfully!')"
+RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('✅ Model cached to /tmp successfully!')"
 
 # Set ownership of app directory
 USER root
@@ -54,5 +53,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health')"
 
-# Use startup script to clean locks and start gunicorn with 1 worker (avoid race conditions)
+# Use startup script
 CMD ["/app/startup.sh"]
