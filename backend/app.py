@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from anthropic import Anthropic, APIError
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from rag import build_index, search, get_index_stats, clear_index
+from rag import build_index, search, get_index_stats, clear_index, get_documents
 from rules import load_rules, get_rules_text, get_rules_summary
 from scoring import compute_score, get_detailed_score_breakdown
 from recommender import recommend, get_all_programs, get_all_experts, search_resources
@@ -67,7 +67,9 @@ Required format:
       "rule_ref": "QCB regulation reference",
       "evidence": "What the startup has done well",
       "explanation": "Why this demonstrates good readiness",
-      "quality": "excellent|good|adequate"
+      "quality": "excellent|good|adequate",
+      "document_name": "filename.docx",
+      "text_snippet": "Exact quote from document (50-150 chars)"
     }
   ],
   "gaps": [
@@ -76,7 +78,9 @@ Required format:
       "rule_ref": "QCB regulation reference",
       "evidence": "What the startup currently lacks",
       "explanation": "Clear explanation of the gap",
-      "severity": "high|medium|low"
+      "severity": "high|medium|low",
+      "document_name": "filename.docx or 'General'",
+      "text_snippet": "Related text from document if applicable"
     }
   ],
   "notes": [
@@ -249,10 +253,15 @@ def analyze_compliance():
         startup_summary = data["summary"]
         logger.info(f"Analyzing startup with summary: {startup_summary[:100]}...")
 
-        # Retrieve relevant document chunks
+        # Retrieve relevant document chunks with metadata
         search_results = search(startup_summary, k=10)
-        contexts = [chunk for _, chunk, _ in search_results]
-        context_text = "\n\n---\n\n".join(contexts)
+
+        # Format contexts with document source information
+        formatted_contexts = []
+        for score, chunk, metadata in search_results:
+            filename = metadata.get("filename", "unknown")
+            formatted_contexts.append(f"[Document: {filename}]\n{chunk}")
+        context_text = "\n\n---\n\n".join(formatted_contexts)
 
         # Get QCB rules
         rules_text = get_rules_text()
@@ -314,6 +323,53 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
             # Generate recommendations
             recommendations = recommend(gaps)
 
+            # Build document annotations
+            documents = get_documents()
+            document_annotations = []
+
+            for doc in documents:
+                doc_annotations = {
+                    "filename": doc["filename"],
+                    "full_text": doc["full_text"],
+                    "annotations": []
+                }
+
+                # Find all strengths and gaps that reference this document
+                for strength in strengths:
+                    if strength.get("document_name") == doc["filename"]:
+                        text_snippet = strength.get("text_snippet", "")
+                        # Try to find the snippet in the document
+                        start_idx = doc["full_text"].find(text_snippet) if text_snippet else -1
+
+                        doc_annotations["annotations"].append({
+                            "type": "strength",
+                            "title": strength["title"],
+                            "explanation": strength["explanation"],
+                            "quality": strength["quality"],
+                            "rule_ref": strength.get("rule_ref", ""),
+                            "text_snippet": text_snippet,
+                            "start_index": start_idx if start_idx != -1 else None,
+                            "end_index": start_idx + len(text_snippet) if start_idx != -1 else None
+                        })
+
+                for gap in gaps:
+                    if gap.get("document_name") == doc["filename"]:
+                        text_snippet = gap.get("text_snippet", "")
+                        start_idx = doc["full_text"].find(text_snippet) if text_snippet else -1
+
+                        doc_annotations["annotations"].append({
+                            "type": "gap",
+                            "title": gap["title"],
+                            "explanation": gap["explanation"],
+                            "severity": gap["severity"],
+                            "rule_ref": gap.get("rule_ref", ""),
+                            "text_snippet": text_snippet,
+                            "start_index": start_idx if start_idx != -1 else None,
+                            "end_index": start_idx + len(text_snippet) if start_idx != -1 else None
+                        })
+
+                document_annotations.append(doc_annotations)
+
             # Prepare response
             response = {
                 "success": True,
@@ -329,7 +385,8 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                 "score_breakdown": score_breakdown,
                 "recommendations": recommendations,
                 "notes": notes,
-                "context_chunks_used": len(contexts)
+                "context_chunks_used": len(formatted_contexts),
+                "documents": document_annotations  # NEW: Document-level annotations
             }
 
             logger.info(
@@ -429,42 +486,54 @@ def demo_analysis():
                 "rule_ref": "QCB 1.1.4",
                 "evidence": "Detailed AML/CFT policy covering transaction monitoring, suspicious activity reporting, and customer screening procedures",
                 "explanation": "Your AML/CFT framework is thorough and demonstrates strong understanding of regulatory requirements. It includes specific thresholds, escalation procedures, and clear roles and responsibilities.",
-                "quality": "good"
+                "quality": "good",
+                "document_name": "aml_policy.docx",
+                "text_snippet": "AML/CFT framework covers transaction monitoring, suspicious activity reporting, and customer screening procedures"
             },
             {
                 "title": "Strong Business Plan with Market Analysis",
                 "rule_ref": "General Requirements",
                 "evidence": "Comprehensive business plan with financial projections, market analysis, and clear value proposition",
                 "explanation": "Your business plan is detailed and shows clear understanding of Qatar's fintech market. Financial projections are realistic and well-supported.",
-                "quality": "excellent"
+                "quality": "excellent",
+                "document_name": "business_plan.docx",
+                "text_snippet": "Qatar's digital payment market is expanding rapidly with increasing smartphone penetration"
             },
             {
                 "title": "Cybersecurity Framework Documented",
                 "rule_ref": "QCB 2.3.1",
                 "evidence": "ISO 27001-aligned cybersecurity framework with incident response procedures and security controls",
                 "explanation": "Your cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements with comprehensive controls.",
-                "quality": "excellent"
+                "quality": "excellent",
+                "document_name": "cybersecurity_framework.docx",
+                "text_snippet": "cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements"
             },
             {
                 "title": "Capital Adequacy Commitment",
                 "rule_ref": "QCB 3.1.1",
                 "evidence": "Committed capital of QAR 10,000,000 with shareholder agreements in place",
                 "explanation": "Capital requirements are clearly understood and commitments are documented through shareholder agreements.",
-                "quality": "good"
+                "quality": "good",
+                "document_name": "business_plan.docx",
+                "text_snippet": "committed capital of QAR 10,000,000 with shareholder agreements in place"
             },
             {
                 "title": "Corporate Governance Structure Defined",
                 "rule_ref": "QCB 4.1.1",
                 "evidence": "Board of 3 directors identified including independent members, with governance framework outlined",
                 "explanation": "Your governance structure meets QCB requirements with appropriate board composition and clear reporting lines.",
-                "quality": "adequate"
+                "quality": "adequate",
+                "document_name": "business_plan.docx",
+                "text_snippet": "Board of 3 directors including independent members, with governance framework outlined"
             },
             {
                 "title": "Customer Due Diligence Procedures",
                 "rule_ref": "QCB 1.2.1",
                 "evidence": "Enhanced CDD procedures documented covering identity verification and beneficial ownership",
                 "explanation": "Your CDD procedures are well-documented and cover the key requirements for customer onboarding and monitoring.",
-                "quality": "good"
+                "quality": "good",
+                "document_name": "aml_policy.docx",
+                "text_snippet": "Enhanced CDD procedures documented covering identity verification and beneficial ownership"
             }
         ]
 
@@ -475,14 +544,18 @@ def demo_analysis():
                 "rule_ref": "QCB 2.1.1",
                 "evidence": "Plan to use Qatar-based data centers documented but specific timeline and provider not confirmed",
                 "explanation": "While you've identified the data residency requirement, provide a specific timeline and confirm Qatar-based hosting arrangements.",
-                "severity": "medium"
+                "severity": "medium",
+                "document_name": "business_plan.docx",
+                "text_snippet": "plan to use Qatar-based data centers documented but specific timeline and provider not confirmed"
             },
             {
                 "title": "Business Continuity Testing Schedule",
                 "rule_ref": "QCB Operational Risk",
                 "evidence": "Business continuity plan exists but annual testing schedule not specified",
                 "explanation": "Include a specific schedule for annual BCP testing and document the testing procedures.",
-                "severity": "low"
+                "severity": "low",
+                "document_name": "business_plan.docx",
+                "text_snippet": "Business Continuity Plan exists but annual testing schedule not specified"
             }
         ]
 
@@ -502,6 +575,108 @@ def demo_analysis():
             "Strong foundation for licensing application - recommend scheduling pre-application meeting with QCB"
         ]
 
+        # Sample documents with annotations
+        sample_documents = [
+            {
+                "filename": "business_plan.docx",
+                "full_text": "FinPay Qatar Business Plan\n\nExecutive Summary\n\nFinPay is a digital payment processing platform designed for Qatar's growing fintech ecosystem. Our company follows comprehensive KYC procedures for all customers, including identity verification and address confirmation. We have assembled a Board of 3 directors including independent members, with governance framework outlined in our Corporate Governance Policy.\n\nFinancial Projections\n\nWe have committed capital of QAR 10,000,000 with shareholder agreements in place. Our three-year financial projections show sustainable growth with clear revenue models from transaction fees and merchant services.\n\nMarket Analysis\n\nQatar's digital payment market is expanding rapidly with increasing smartphone penetration and government support for financial innovation. Our value proposition focuses on seamless integration with local banking systems while maintaining world-class security standards.\n\nOperational Infrastructure\n\nWe plan to use Qatar-based data centers documented but specific timeline and provider not confirmed. Our Business Continuity Plan exists but annual testing schedule not specified in current documentation.",
+                "annotations": [
+                    {
+                        "type": "strength",
+                        "title": "Strong Business Plan with Market Analysis",
+                        "explanation": "Your business plan is detailed and shows clear understanding of Qatar's fintech market. Financial projections are realistic and well-supported.",
+                        "quality": "excellent",
+                        "rule_ref": "General Requirements",
+                        "text_snippet": "Qatar's digital payment market is expanding rapidly with increasing smartphone penetration",
+                        "start_index": 580,
+                        "end_index": 668
+                    },
+                    {
+                        "type": "strength",
+                        "title": "Capital Adequacy Commitment",
+                        "explanation": "Capital requirements are clearly understood and commitments are documented through shareholder agreements.",
+                        "quality": "good",
+                        "rule_ref": "QCB 3.1.1",
+                        "text_snippet": "committed capital of QAR 10,000,000 with shareholder agreements in place",
+                        "start_index": 492,
+                        "end_index": 565
+                    },
+                    {
+                        "type": "strength",
+                        "title": "Corporate Governance Structure Defined",
+                        "explanation": "Your governance structure meets QCB requirements with appropriate board composition and clear reporting lines.",
+                        "quality": "adequate",
+                        "rule_ref": "QCB 4.1.1",
+                        "text_snippet": "Board of 3 directors including independent members, with governance framework outlined",
+                        "start_index": 280,
+                        "end_index": 366
+                    },
+                    {
+                        "type": "gap",
+                        "title": "Data Residency Implementation Timeline",
+                        "explanation": "While you've identified the data residency requirement, provide a specific timeline and confirm Qatar-based hosting arrangements.",
+                        "severity": "medium",
+                        "rule_ref": "QCB 2.1.1",
+                        "text_snippet": "plan to use Qatar-based data centers documented but specific timeline and provider not confirmed",
+                        "start_index": 829,
+                        "end_index": 926
+                    },
+                    {
+                        "type": "gap",
+                        "title": "Business Continuity Testing Schedule",
+                        "explanation": "Include a specific schedule for annual BCP testing and document the testing procedures.",
+                        "severity": "low",
+                        "rule_ref": "QCB Operational Risk",
+                        "text_snippet": "Business Continuity Plan exists but annual testing schedule not specified",
+                        "start_index": 932,
+                        "end_index": 1006
+                    }
+                ]
+            },
+            {
+                "filename": "aml_policy.docx",
+                "full_text": "FinPay AML/CFT Policy Document\n\nVersion 1.2 - Last Updated: January 2025\n\n1. Introduction\n\nThis Anti-Money Laundering and Countering the Financing of Terrorism (AML/CFT) policy establishes FinPay's framework for preventing financial crime.\n\n2. Customer Due Diligence\n\nWe implement Enhanced CDD procedures documented covering identity verification and beneficial ownership for all customers. Our process includes:\n\n- Identity document verification (QID/Passport)\n- Address verification through utility bills\n- Beneficial ownership identification for corporate accounts\n- PEP (Politically Exposed Persons) screening\n- Ongoing monitoring and periodic review\n\n3. Transaction Monitoring\n\nOur AML/CFT framework covers transaction monitoring, suspicious activity reporting, and customer screening procedures. We have established specific thresholds of QAR 55,000 for enhanced due diligence and automated alerts for unusual patterns.\n\n4. Suspicious Activity Reporting\n\nClear escalation procedures are defined with designated AML Compliance Officer responsible for STR submissions to Qatar Financial Information Unit (QFIU). All staff receive annual AML training.\n\n5. Record Keeping\n\nAll customer records and transaction data are retained for minimum 10 years in accordance with QCB requirements.",
+                "annotations": [
+                    {
+                        "type": "strength",
+                        "title": "Comprehensive AML/CFT Policy Framework",
+                        "explanation": "Your AML/CFT framework is thorough and demonstrates strong understanding of regulatory requirements. It includes specific thresholds, escalation procedures, and clear roles and responsibilities.",
+                        "quality": "good",
+                        "rule_ref": "QCB 1.1.4",
+                        "text_snippet": "AML/CFT framework covers transaction monitoring, suspicious activity reporting, and customer screening procedures",
+                        "start_index": 652,
+                        "end_index": 762
+                    },
+                    {
+                        "type": "strength",
+                        "title": "Customer Due Diligence Procedures",
+                        "explanation": "Your CDD procedures are well-documented and cover the key requirements for customer onboarding and monitoring.",
+                        "quality": "good",
+                        "rule_ref": "QCB 1.2.1",
+                        "text_snippet": "Enhanced CDD procedures documented covering identity verification and beneficial ownership",
+                        "start_index": 285,
+                        "end_index": 374
+                    }
+                ]
+            },
+            {
+                "filename": "cybersecurity_framework.docx",
+                "full_text": "FinPay Cybersecurity Framework\n\nISO 27001 Alignment\n\nOur cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements with comprehensive controls aligned to ISO 27001:2013 standards.\n\n1. Security Controls\n\n- Access Management: Role-based access control (RBAC)\n- Encryption: AES-256 for data at rest, TLS 1.3 for data in transit\n- Network Security: Firewall rules, intrusion detection/prevention systems\n- Vulnerability Management: Quarterly penetration testing\n- Security Monitoring: 24/7 SOC with SIEM integration\n\n2. Incident Response\n\nComprehensive incident response procedures documented including:\n- Incident classification matrix\n- Escalation workflows\n- Communication protocols\n- Post-incident review process\n\n3. Business Continuity\n\nDisaster recovery procedures with RTO of 4 hours and RPO of 1 hour. Backup systems tested quarterly.\n\n4. Compliance\n\nRegular security audits and compliance assessments conducted by external certified auditors. Last audit completed December 2024 with no critical findings.",
+                "annotations": [
+                    {
+                        "type": "strength",
+                        "title": "Cybersecurity Framework Documented",
+                        "explanation": "Your cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements with comprehensive controls.",
+                        "quality": "excellent",
+                        "rule_ref": "QCB 2.3.1",
+                        "text_snippet": "cybersecurity approach follows industry best practices and demonstrates excellent preparation for QCB security requirements",
+                        "start_index": 59,
+                        "end_index": 180
+                    }
+                ]
+            }
+        ]
+
         response = {
             "success": True,
             "score": score_breakdown["final_score"],
@@ -517,7 +692,8 @@ def demo_analysis():
             "recommendations": recommendations,
             "notes": sample_notes,
             "context_chunks_used": 15,
-            "is_demo": True  # Flag to indicate this is sample data
+            "is_demo": True,  # Flag to indicate this is sample data
+            "documents": sample_documents  # NEW: Sample document annotations
         }
 
         logger.info("Returning demo analysis results")

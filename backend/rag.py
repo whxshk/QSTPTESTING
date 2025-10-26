@@ -21,6 +21,7 @@ _model = None
 _index = None
 _chunks = []
 _metadata = []
+_documents = []  # Store full document texts with metadata
 
 
 def get_model():
@@ -91,7 +92,7 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
         return ""
 
 
-def chunk_text(text: str, chunk_size: int = 800, overlap: int = 120) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 800, overlap: int = 120) -> List[Tuple[str, int, int]]:
     """
     Split text into overlapping chunks for better context preservation.
 
@@ -101,16 +102,28 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 120) -> List[str
         overlap: Number of words to overlap between chunks
 
     Returns:
-        List of text chunks
+        List of (chunk_text, start_char, end_char) tuples
     """
     words = text.split()
     chunks = []
     i = 0
+    char_position = 0
 
     while i < len(words):
-        chunk = " ".join(words[i:i + chunk_size])
-        if chunk:  # Only add non-empty chunks
-            chunks.append(chunk)
+        # Get chunk words
+        chunk_words = words[i:i + chunk_size]
+        chunk_text = " ".join(chunk_words)
+
+        if chunk_text:  # Only add non-empty chunks
+            # Find approximate character position in original text
+            start_char = text.find(chunk_words[0], char_position)
+            if start_char == -1:
+                start_char = char_position
+
+            end_char = start_char + len(chunk_text)
+            chunks.append((chunk_text, start_char, end_char))
+            char_position = end_char
+
         i += chunk_size - overlap
 
         # Prevent infinite loop
@@ -134,22 +147,39 @@ def build_index(files: List[Tuple[bytes, str]]) -> dict:
     Raises:
         ValueError: If no valid text could be extracted
     """
-    global _index, _chunks, _metadata
+    global _index, _chunks, _metadata, _documents
 
     _chunks = []
     _metadata = []
+    _documents = []
 
     logger.info(f"Building index from {len(files)} files")
 
     # Extract and chunk all files
-    for file_bytes, filename in files:
+    for doc_idx, (file_bytes, filename) in enumerate(files):
         text = extract_text(file_bytes, filename)
 
         if text:
-            file_chunks = chunk_text(text)
-            _chunks.extend(file_chunks)
-            _metadata.extend([{"filename": filename, "chunk_id": i}
-                            for i in range(len(file_chunks))])
+            # Store full document
+            _documents.append({
+                "id": doc_idx,
+                "filename": filename,
+                "full_text": text,
+                "length": len(text)
+            })
+
+            # Create chunks with positions
+            file_chunks_with_positions = chunk_text(text)
+
+            for chunk_id, (chunk_text, start_char, end_char) in enumerate(file_chunks_with_positions):
+                _chunks.append(chunk_text)
+                _metadata.append({
+                    "filename": filename,
+                    "doc_id": doc_idx,
+                    "chunk_id": chunk_id,
+                    "start_char": start_char,
+                    "end_char": end_char
+                })
         else:
             logger.warning(f"No text extracted from {filename}")
 
@@ -182,6 +212,7 @@ def build_index(files: List[Tuple[bytes, str]]) -> dict:
     return {
         "chunks_indexed": len(_chunks),
         "files_processed": len(files),
+        "documents_stored": len(_documents),
         "embedding_dimension": dimension
     }
 
@@ -231,14 +262,21 @@ def get_index_stats() -> dict:
     return {
         "indexed": _index is not None,
         "total_chunks": len(_chunks),
+        "total_documents": len(_documents),
         "index_size": _index.ntotal if _index else 0
     }
 
 
+def get_documents() -> List[dict]:
+    """Get all stored documents with their full text."""
+    return _documents
+
+
 def clear_index():
     """Clear the current index and free memory."""
-    global _index, _chunks, _metadata
+    global _index, _chunks, _metadata, _documents
     _index = None
     _chunks = []
     _metadata = []
+    _documents = []
     logger.info("Index cleared")
