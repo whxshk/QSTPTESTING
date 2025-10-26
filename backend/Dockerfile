@@ -13,9 +13,6 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
-
 # Use /tmp for HuggingFace cache - ALWAYS writable, no permission issues
 ENV HF_HOME=/tmp/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/huggingface/transformers
@@ -32,17 +29,18 @@ RUN mkdir -p /tmp/huggingface/hub \
     /tmp/huggingface/sentence-transformers && \
     chmod -R 777 /tmp/huggingface
 
+# Copy application code
+COPY . .
+
+# Copy startup script and set executable permissions BEFORE switching user
+RUN chmod +x /app/startup.sh
+
 # Pre-download model to /tmp as appuser
 USER appuser
 RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('✅ Model cached to /tmp successfully!')"
 
-# Set ownership of app directory
 USER root
-RUN chown -R appuser:appuser /app && chmod -R 755 /app
-
-# Copy and set up startup script
-COPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh && chown appuser:appuser /app/startup.sh
+RUN chown -R appuser:appuser /app
 
 USER appuser
 
