@@ -51,6 +51,7 @@ CRITICAL PARADIGM SHIFT: Focus on STRENGTHS first, gaps second. A well-prepared 
 YOUR TASK:
 1. Identify what the startup HAS DONE WELL (strengths)
 2. Identify what needs improvement (gaps)
+3. FOR EACH FINDING: Cite the specific document and extract an exact quote
 
 SCORING APPROACH:
 - Strengths ADD points (most startups should have 5-8 strengths)
@@ -68,8 +69,8 @@ Required format:
       "evidence": "What the startup has done well",
       "explanation": "Why this demonstrates good readiness",
       "quality": "excellent|good|adequate",
-      "document_name": "filename.docx",
-      "text_snippet": "Exact quote from document (50-150 chars)"
+      "document_name": "exact_filename.docx",
+      "text_snippet": "Exact quote from document showing this strength (50-150 chars)"
     }
   ],
   "gaps": [
@@ -79,14 +80,23 @@ Required format:
       "evidence": "What the startup currently lacks",
       "explanation": "Clear explanation of the gap",
       "severity": "high|medium|low",
-      "document_name": "filename.docx or 'General'",
-      "text_snippet": "Related text from document if applicable"
+      "document_name": "exact_filename.docx where gap was identified, or 'General' if not document-specific",
+      "text_snippet": "Exact quote from document showing the issue (50-150 chars), or empty string if General"
     }
   ],
   "notes": [
     "Overall positive observations"
   ]
 }
+
+CRITICAL CITATION REQUIREMENTS:
+1. ALWAYS provide "document_name" - use the EXACT filename from [Document: filename.docx] tags in the context
+2. ALWAYS provide "text_snippet" - copy a SHORT exact quote (50-150 chars) from the document that supports your finding
+3. The text_snippet MUST be an EXACT substring from the document (word-for-word match)
+4. Choose snippets that clearly show the strength or gap
+5. For strengths: pick text showing what they DID
+6. For gaps: pick text showing what's MISSING or INADEQUATE
+7. If a finding is based on absence of information across all docs, use document_name: "General"
 
 STRENGTH QUALITY LEVELS:
 - "excellent": Comprehensive, well-documented, exceeds basic requirements (+15 points)
@@ -109,6 +119,13 @@ WHAT TO IDENTIFY AS STRENGTHS:
 ✓ Source of funds verification procedures in place
 
 ONLY flag as gaps if TRULY missing or severely inadequate. Be generous - reward what they have!
+
+EXAMPLE of good citations:
+{
+  "title": "Strong AML Policy",
+  "document_name": "compliance_policy.docx",
+  "text_snippet": "We implement enhanced due diligence for all high-risk customers including PEP screening"
+}
 """
 
 
@@ -317,15 +334,60 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
             gaps = analysis_data.get("gaps", [])
             notes = analysis_data.get("notes", [])
 
+            # Log document citations for debugging
+            logger.info(f"Strengths with citations: {len([s for s in strengths if s.get('document_name')])}/{len(strengths)}")
+            logger.info(f"Gaps with citations: {len([g for g in gaps if g.get('document_name')])}/{len(gaps)}")
+
             # Calculate score and breakdown (NEW: pass strengths AND gaps)
             score_breakdown = get_detailed_score_breakdown(strengths, gaps)
 
             # Generate recommendations
             recommendations = recommend(gaps)
 
+            # Helper function to find text snippet in document with fuzzy matching
+            def find_snippet_in_text(full_text: str, snippet: str) -> int:
+                """
+                Find snippet in text with multiple strategies:
+                1. Exact match
+                2. Case-insensitive match
+                3. Normalized whitespace match
+                4. Fuzzy match (first 30 chars)
+                """
+                if not snippet:
+                    return -1
+
+                # Strategy 1: Exact match
+                idx = full_text.find(snippet)
+                if idx != -1:
+                    return idx
+
+                # Strategy 2: Case-insensitive match
+                idx = full_text.lower().find(snippet.lower())
+                if idx != -1:
+                    return idx
+
+                # Strategy 3: Normalized whitespace
+                normalized_text = " ".join(full_text.split())
+                normalized_snippet = " ".join(snippet.split())
+                idx = normalized_text.find(normalized_snippet)
+                if idx != -1:
+                    # Find approximate position in original text
+                    return full_text.find(normalized_snippet.split()[0])
+
+                # Strategy 4: Fuzzy match on first 30 characters
+                if len(snippet) > 30:
+                    short_snippet = snippet[:30]
+                    idx = full_text.lower().find(short_snippet.lower())
+                    if idx != -1:
+                        return idx
+
+                return -1
+
             # Build document annotations
             documents = get_documents()
             document_annotations = []
+
+            logger.info(f"Building annotations for {len(documents)} documents")
 
             for doc in documents:
                 doc_annotations = {
@@ -338,8 +400,13 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                 for strength in strengths:
                     if strength.get("document_name") == doc["filename"]:
                         text_snippet = strength.get("text_snippet", "")
-                        # Try to find the snippet in the document
-                        start_idx = doc["full_text"].find(text_snippet) if text_snippet else -1
+                        # Try to find the snippet in the document with fuzzy matching
+                        start_idx = find_snippet_in_text(doc["full_text"], text_snippet)
+
+                        if start_idx == -1 and text_snippet:
+                            logger.warning(f"Could not find snippet in {doc['filename']}: '{text_snippet[:50]}...'")
+                        else:
+                            logger.info(f"Matched strength snippet in {doc['filename']} at position {start_idx}")
 
                         doc_annotations["annotations"].append({
                             "type": "strength",
@@ -355,7 +422,12 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                 for gap in gaps:
                     if gap.get("document_name") == doc["filename"]:
                         text_snippet = gap.get("text_snippet", "")
-                        start_idx = doc["full_text"].find(text_snippet) if text_snippet else -1
+                        start_idx = find_snippet_in_text(doc["full_text"], text_snippet)
+
+                        if start_idx == -1 and text_snippet:
+                            logger.warning(f"Could not find gap snippet in {doc['filename']}: '{text_snippet[:50]}...'")
+                        else:
+                            logger.info(f"Matched gap snippet in {doc['filename']} at position {start_idx}")
 
                         doc_annotations["annotations"].append({
                             "type": "gap",
@@ -369,6 +441,12 @@ CRITICAL: Return ONLY raw JSON starting with {{ and ending with }}. NO markdown,
                         })
 
                 document_annotations.append(doc_annotations)
+
+            # Log annotation summary
+            total_annotations = sum(len(doc["annotations"]) for doc in document_annotations)
+            logger.info(f"Created {total_annotations} annotations across {len(document_annotations)} documents")
+            for doc in document_annotations:
+                logger.info(f"  {doc['filename']}: {len(doc['annotations'])} annotations")
 
             # Prepare response
             response = {
